@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FormatListBulleted
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,9 +25,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,12 +34,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Appointment
+import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.LoadingView
+import com.pawcare.app.ui.components.OwnerInfoRow
+import com.pawcare.app.ui.components.PawButtonShape
+import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawChipShape
 import com.pawcare.app.ui.components.PetAvatar
+import com.pawcare.app.ui.components.RejectionReasonDialog
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.AdminViewModel
 
@@ -56,106 +61,74 @@ fun AdminQueueScreen(
     val selectedDateFilter by viewModel.selectedDateFilter.collectAsStateWithLifecycle()
 
     var appointmentToReject by remember { mutableStateOf<Appointment?>(null) }
-    var rejectionReasonInput by remember { mutableStateOf("") }
-    var rejectionError by remember { mutableStateOf<String?>(null) }
 
     if (appointmentToReject != null) {
         val target = appointmentToReject!!
-        AlertDialog(
-            onDismissRequest = { appointmentToReject = null },
-            title = { Text("Tolak Janji Temu") },
-            text = {
-                Column {
-                    Text("Berikan alasan penolakan untuk booking anabul ${target.petName} (${target.date} ${target.timeSlot}). Alasan ini akan tampil pada pemilik hewan.")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = rejectionReasonInput,
-                        onValueChange = {
-                            rejectionReasonInput = it
-                            rejectionError = null
-                        },
-                        label = { Text("Alasan Penolakan *") },
-                        isError = rejectionError != null,
-                        supportingText = rejectionError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2
-                    )
-                }
+        RejectionReasonDialog(
+            title = "Tolak Janji: ${target.petName}",
+            onConfirm = { reason ->
+                viewModel.rejectAppointment(
+                    appointmentId = target.appointmentId,
+                    slotKey = target.slotKey,
+                    reason = reason
+                )
+                appointmentToReject = null
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (rejectionReasonInput.trim().isEmpty()) {
-                            rejectionError = "Alasan pembatalan/penolakan wajib diisi"
-                            return@Button
-                        }
-                        viewModel.rejectAppointment(
-                            appointmentId = target.appointmentId,
-                            slotKey = target.slotKey,
-                            reason = rejectionReasonInput
-                        )
-                        appointmentToReject = null
-                        rejectionReasonInput = ""
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Tolak & Kosongkan Slot")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    appointmentToReject = null
-                    rejectionReasonInput = ""
-                }) {
-                    Text("Batal")
-                }
-            }
+            onDismiss = { appointmentToReject = null }
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (availableDates.isNotEmpty()) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedDateFilter == null,
-                        onClick = { viewModel.setDateFilter(null) },
-                        label = { Text("Semua Tanggal") }
-                    )
-                }
-                items(availableDates) { date ->
-                    FilterChip(
-                        selected = selectedDateFilter == date,
-                        onClick = { viewModel.setDateFilter(date) },
-                        label = { Text(date) }
-                    )
+    ResponsiveScreenBox {
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (availableDates.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedDateFilter == null,
+                            onClick = { viewModel.setDateFilter(null) },
+                            shape = PawChipShape,
+                            label = { Text("Semua Tanggal") }
+                        )
+                    }
+                    items(availableDates) { date ->
+                        FilterChip(
+                            selected = selectedDateFilter == date,
+                            onClick = { viewModel.setDateFilter(date) },
+                            shape = PawChipShape,
+                            label = { Text(date) }
+                        )
+                    }
                 }
             }
-        }
 
-        if (isLoading && pendingList.isEmpty()) {
-            LoadingView()
-        } else if (pendingList.isEmpty()) {
-            EmptyStateView(
-                title = "Tidak Ada Antrean Baru",
-                message = "Semua permohonan booking janji temu telah ditinjau atau belum ada pemesanan baru.",
-                icon = Icons.Default.FormatListBulleted
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(pendingList, key = { it.appointmentId }) { apt ->
-                    AdminQueueCard(
-                        appointment = apt,
-                        onApprove = { viewModel.confirmAppointment(apt.appointmentId) },
-                        onReject = { appointmentToReject = apt }
-                    )
+            if (isLoading && pendingList.isEmpty()) {
+                LoadingView(modifier = Modifier.weight(1f))
+            } else if (pendingList.isEmpty()) {
+                EmptyStateView(
+                    title = "Tidak Ada Antrean Baru",
+                    message = "Semua permohonan booking janji temu telah ditinjau atau belum ada pemesanan baru.",
+                    icon = Icons.Default.FormatListBulleted,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(pendingList, key = { it.appointmentId }) { apt ->
+                        AdminQueueCard(
+                            appointment = apt,
+                            onApprove = { viewModel.confirmAppointment(apt.appointmentId) },
+                            onReject = { appointmentToReject = apt }
+                        )
+                    }
                 }
             }
         }
@@ -170,12 +143,14 @@ private fun AdminQueueCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = PawCardShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -183,37 +158,47 @@ private fun AdminQueueCard(
             ) {
                 PetAvatar(species = appointment.petSpeciesEnum, size = 44.dp)
                 Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = "${appointment.petName} (${appointment.serviceTypeEnum.displayName})",
+                        text = "${appointment.petName} (${appointment.petSpeciesEnum.displayName})",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Pemilik: ${appointment.ownerEmail}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "🗓️ ${appointment.date} pukul ${appointment.timeSlot} WIB",
+                        text = appointment.serviceTypeEnum.displayName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(status = appointment.statusEnum)
             }
 
+            OwnerInfoRow(ownerEmail = appointment.ownerEmail)
+
+            AppointmentScheduleBanner(
+                date = appointment.date,
+                timeSlot = appointment.timeSlot
+            )
+
             if (appointment.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Keluhan: ${appointment.notes}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -221,17 +206,21 @@ private fun AdminQueueCard(
             ) {
                 OutlinedButton(
                     onClick = onReject,
+                    shape = PawButtonShape,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tolak")
+                    Text("Tolak", fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onApprove) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = onApprove,
+                    shape = PawButtonShape
+                ) {
                     Icon(Icons.Default.Check, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Setujui")
+                    Text("Setujui", fontWeight = FontWeight.SemiBold)
                 }
             }
         }

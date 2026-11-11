@@ -26,11 +26,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Appointment
+import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
+import com.pawcare.app.ui.components.OwnerInfoRow
+import com.pawcare.app.ui.components.PawButtonShape
+import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PetAvatar
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.AdminViewModel
 
@@ -48,16 +54,18 @@ fun AdminActivePatientsScreen(
             icon = Icons.Default.LocalHospital
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(confirmedList, key = { it.appointmentId }) { apt ->
-                ActivePatientCard(
-                    appointment = apt,
-                    onInputRecordClick = { onInputRecordClick(apt.appointmentId) }
-                )
+        ResponsiveScreenBox {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(confirmedList, key = { it.appointmentId }) { apt ->
+                    ActivePatientCard(
+                        appointment = apt,
+                        onInputRecordClick = { onInputRecordClick(apt.appointmentId) }
+                    )
+                }
             }
         }
     }
@@ -70,12 +78,14 @@ private fun ActivePatientCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = PawCardShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -83,45 +93,56 @@ private fun ActivePatientCard(
             ) {
                 PetAvatar(species = appointment.petSpeciesEnum, size = 44.dp)
                 Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = "${appointment.petName} • ${appointment.serviceTypeEnum.displayName}",
+                        text = "${appointment.petName} (${appointment.petSpeciesEnum.displayName})",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Pemilik: ${appointment.ownerEmail}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "🗓️ ${appointment.date} pukul ${appointment.timeSlot} WIB",
+                        text = appointment.serviceTypeEnum.displayName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(status = appointment.statusEnum)
             }
 
+            OwnerInfoRow(ownerEmail = appointment.ownerEmail)
+
+            AppointmentScheduleBanner(
+                date = appointment.date,
+                timeSlot = appointment.timeSlot
+            )
+
             if (appointment.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Keluhan: ${appointment.notes}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Button(
                 onClick = onInputRecordClick,
+                shape = PawButtonShape,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Icon(Icons.Default.EditNote, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Input Rekam Medis")
+                Text("Input Rekam Medis", fontWeight = FontWeight.SemiBold)
             }
         }
     }

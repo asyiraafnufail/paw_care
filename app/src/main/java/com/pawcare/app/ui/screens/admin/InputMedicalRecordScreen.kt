@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -27,13 +28,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,13 +45,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.ServiceType
 import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.ErrorStateView
 import com.pawcare.app.ui.components.LoadingView
+import com.pawcare.app.ui.components.PawButtonShape
+import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawFieldShape
+import com.pawcare.app.ui.components.PawTextField
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.util.UiState
 import com.pawcare.app.viewmodel.AdminViewModel
 import kotlinx.coroutines.launch
@@ -98,26 +106,32 @@ fun InputMedicalRecordScreen(
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
+            shape = PawCardShape,
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val chosen = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                        val visitDate = loadedApt?.let { runCatching { LocalDate.parse(it.date) }.getOrNull() } ?: LocalDate.now()
-                        if (chosen.isBefore(visitDate)) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Jadwal kontrol berikutnya tidak boleh sebelum tanggal periksa")
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val chosen = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            val visitDate = loadedApt?.let { runCatching { LocalDate.parse(it.date) }.getOrNull() } ?: LocalDate.now()
+                            if (chosen.isBefore(visitDate)) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Jadwal kontrol berikutnya tidak boleh sebelum tanggal periksa")
+                                }
+                            } else {
+                                nextVisitDate = chosen
                             }
-                        } else {
-                            nextVisitDate = chosen
                         }
-                    }
-                    showDatePicker = false
-                }) {
+                        showDatePicker = false
+                    },
+                    shape = PawButtonShape
+                ) {
                     Text("Pilih")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+                TextButton(onClick = { showDatePicker = false }, shape = PawButtonShape) {
+                    Text("Batal")
+                }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -127,12 +141,13 @@ fun InputMedicalRecordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Input Rekam Medis") },
+                title = { Text("Input Rekam Medis", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -158,148 +173,173 @@ fun InputMedicalRecordScreen(
 
                 val isVaccination = apt.serviceTypeEnum == ServiceType.VACCINATION
 
-                Column(
+                ResponsiveScreenBox(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .imePadding()
                 ) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "${apt.petName} • ${apt.serviceTypeEnum.displayName}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Pemilik: ${apt.ownerEmail}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Jadwal: ${apt.date} pukul ${apt.timeSlot} WIB",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            if (apt.notes.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Keluhan Awal: ${apt.notes}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = diagnosis,
-                        onValueChange = { diagnosis = it },
-                        label = { Text("Diagnosa Dokter *") },
-                        minLines = 2,
-                        maxLines = 4,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    OutlinedTextField(
-                        value = treatment,
-                        onValueChange = { treatment = it },
-                        label = { Text("Tindakan & Terapi *") },
-                        minLines = 2,
-                        maxLines = 4,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    if (isVaccination) {
-                        OutlinedTextField(
-                            value = vaccineName,
-                            onValueChange = { vaccineName = it },
-                            label = { Text("Nama / Merk Vaksin *") },
-                            placeholder = { Text("Contoh: Nobivac Rabies / Felocell 3") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        OutlinedTextField(
-                            value = vaccineName,
-                            onValueChange = { vaccineName = it },
-                            label = { Text("Nama Vaksin (Opsional jika ada)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = doctorNotes,
-                        onValueChange = { doctorNotes = it },
-                        label = { Text("Catatan / Resep Obat (Opsional)") },
-                        minLines = 2,
-                        maxLines = 4,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Card(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showDatePicker = true },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = PawCardShape,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = null)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Text(
-                                    text = "Jadwal Kontrol Berikutnya (Opsional)",
-                                    style = MaterialTheme.typography.labelMedium
+                                    text = "Pasien: ${apt.petName} (${apt.petSpeciesEnum.displayName})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = nextVisitDate?.toString() ?: "Ketuk untuk pilih tanggal",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
+                                    text = "Layanan: ${apt.serviceTypeEnum.displayName}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                            }
-                            if (nextVisitDate != null) {
-                                IconButton(onClick = { nextVisitDate = null }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Hapus tanggal")
+                                Text(
+                                    text = "Pemilik: ${apt.ownerEmail.ifBlank { "-" }}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "Jadwal: ${apt.date} • Pukul ${apt.timeSlot} WIB",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                if (apt.notes.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Keluhan Awal: ${apt.notes}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        PawTextField(
+                            value = diagnosis,
+                            onValueChange = { diagnosis = it },
+                            label = "Diagnosa Dokter *",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4
+                        )
 
-                    Button(
-                        onClick = {
-                            viewModel.submitMedicalRecord(
-                                appointment = apt,
-                                diagnosis = diagnosis,
-                                treatment = treatment,
-                                vaccineName = vaccineName,
-                                notes = doctorNotes,
-                                nextVisitDate = nextVisitDate?.toString(),
-                                onSuccess = onNavigateBack
+                        PawTextField(
+                            value = treatment,
+                            onValueChange = { treatment = it },
+                            label = "Tindakan & Terapi *",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4
+                        )
+
+                        if (isVaccination) {
+                            PawTextField(
+                                value = vaccineName,
+                                onValueChange = { vaccineName = it },
+                                label = "Nama / Merk Vaksin *",
+                                placeholder = "Contoh: Nobivac Rabies / Felocell 3",
+                                singleLine = true
                             )
-                        },
-                        enabled = !isSaving,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                    ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                         } else {
-                            Text("Simpan & Selesaikan Pemeriksaan")
+                            PawTextField(
+                                value = vaccineName,
+                                onValueChange = { vaccineName = it },
+                                label = "Nama Vaksin (Opsional)",
+                                singleLine = true
+                            )
+                        }
+
+                        PawTextField(
+                            value = doctorNotes,
+                            onValueChange = { doctorNotes = it },
+                            label = "Catatan / Resep Obat (Opsional)",
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4
+                        )
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(PawFieldShape)
+                                .clickable { showDatePicker = true },
+                            shape = PawFieldShape,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Jadwal Kontrol Berikutnya (Opsional)",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                    Text(
+                                        text = nextVisitDate?.toString() ?: "Ketuk untuk pilih tanggal",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                if (nextVisitDate != null) {
+                                    IconButton(onClick = { nextVisitDate = null }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Hapus tanggal")
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.submitMedicalRecord(
+                                    appointment = apt,
+                                    diagnosis = diagnosis,
+                                    treatment = treatment,
+                                    vaccineName = vaccineName,
+                                    notes = doctorNotes,
+                                    nextVisitDate = nextVisitDate?.toString(),
+                                    onSuccess = onNavigateBack
+                                )
+                            },
+                            enabled = !isSaving,
+                            shape = PawButtonShape,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            if (isSaving) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text("Simpan & Selesaikan Pemeriksaan", fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }

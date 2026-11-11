@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -30,13 +31,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,12 +48,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Pet
 import com.pawcare.app.data.model.ServiceType
+import com.pawcare.app.ui.components.PawButtonShape
+import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawChipShape
+import com.pawcare.app.ui.components.PawFieldShape
+import com.pawcare.app.ui.components.PawTextField
 import com.pawcare.app.ui.components.PetAvatar
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.util.Validators
 import com.pawcare.app.viewmodel.OwnerViewModel
 import kotlinx.coroutines.launch
@@ -111,26 +120,32 @@ fun CreateBookingScreen(
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
+            shape = PawCardShape,
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val chosen = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-                        if (chosen.isBefore(LocalDate.now())) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Tanggal tidak boleh sebelum hari ini")
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val chosen = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            if (chosen.isBefore(LocalDate.now())) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Tanggal tidak boleh sebelum hari ini")
+                                }
+                            } else {
+                                viewModel.selectBookingDate(chosen)
+                                selectedSlot = null
                             }
-                        } else {
-                            viewModel.selectBookingDate(chosen)
-                            selectedSlot = null
                         }
-                    }
-                    showDatePicker = false
-                }) {
+                        showDatePicker = false
+                    },
+                    shape = PawButtonShape
+                ) {
                     Text("Pilih")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Batal") }
+                TextButton(onClick = { showDatePicker = false }, shape = PawButtonShape) {
+                    Text("Batal")
+                }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -140,152 +155,207 @@ fun CreateBookingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Buat Booking") },
+                title = { Text("Buat Booking", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(
+        ResponsiveScreenBox(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .imePadding()
         ) {
-            Text("Pilih Hewan Peliharaan *", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            if (pets.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Anda belum memiliki anabul terdaftar.", style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(onClick = onNavigateToAddPet) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Daftarkan Hewan Sekarang")
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Pilih Hewan Peliharaan *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (pets.isEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = PawCardShape,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "Anda belum memiliki anabul terdaftar.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                OutlinedButton(
+                                    onClick = onNavigateToAddPet,
+                                    shape = PawButtonShape
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Daftarkan Hewan Sekarang")
+                                }
+                            }
+                        }
+                    } else {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            pets.forEach { pet ->
+                                FilterChip(
+                                    selected = selectedPet?.petId == pet.petId,
+                                    onClick = { selectedPet = pet },
+                                    shape = PawChipShape,
+                                    leadingIcon = { PetAvatar(species = pet.speciesEnum, size = 24.dp) },
+                                    label = {
+                                        Text(
+                                            text = "${pet.name} (${pet.speciesEnum.displayName})",
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    pets.forEach { pet ->
-                        FilterChip(
-                            selected = selectedPet?.petId == pet.petId,
-                            onClick = { selectedPet = pet },
-                            leadingIcon = { PetAvatar(species = pet.speciesEnum, size = 24.dp) },
-                            label = { Text("${pet.name} (${pet.speciesEnum.displayName})") }
-                        )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Jenis Layanan *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ServiceType.entries.forEach { svc ->
+                            FilterChip(
+                                selected = selectedService == svc,
+                                onClick = { selectedService = svc },
+                                shape = PawChipShape,
+                                label = { Text(svc.displayName) }
+                            )
+                        }
                     }
                 }
-            }
 
-            Text("Jenis Layanan *", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ServiceType.entries.forEach { svc ->
-                    FilterChip(
-                        selected = selectedService == svc,
-                        onClick = { selectedService = svc },
-                        label = { Text(svc.displayName) }
-                    )
-                }
-            }
-
-            Text("Pilih Tanggal Kunjungan *", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = null)
-                    Spacer(modifier = Modifier.width(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        text = "Pilih Tanggal Kunjungan *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-            }
-
-            Text("Pilih Jam Kunjungan *", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Validators.CLINIC_TIME_SLOTS.forEach { slot ->
-                    val isPast = Validators.isSlotPastForDate(selectedDate, slot, LocalDateTime.now())
-                    val isBooked = bookedSlots.contains(slot)
-                    val isEnabled = !isPast && !isBooked
-
-                    FilterChip(
-                        selected = selectedSlot == slot,
-                        onClick = { if (isEnabled) selectedSlot = slot },
-                        enabled = isEnabled,
-                        label = {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(PawFieldShape)
+                            .clickable { showDatePicker = true },
+                        shape = PawFieldShape,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null)
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = when {
-                                    isBooked -> "$slot (Penuh)"
-                                    isPast -> "$slot (Lewat)"
-                                    else -> slot
+                                text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Pilih Jam Kunjungan *",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Validators.CLINIC_TIME_SLOTS.forEach { slot ->
+                            val isPast = Validators.isSlotPastForDate(selectedDate, slot, LocalDateTime.now())
+                            val isBooked = bookedSlots.contains(slot)
+                            val isEnabled = !isPast && !isBooked
+
+                            FilterChip(
+                                selected = selectedSlot == slot,
+                                onClick = { if (isEnabled) selectedSlot = slot },
+                                enabled = isEnabled,
+                                shape = PawChipShape,
+                                label = {
+                                    Text(
+                                        text = when {
+                                            isBooked -> "$slot (Penuh)"
+                                            isPast -> "$slot (Lewat)"
+                                            else -> slot
+                                        },
+                                        maxLines = 1
+                                    )
                                 }
                             )
                         }
-                    )
+                    }
                 }
-            }
 
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { if (it.length <= 300) notes = it },
-                label = { Text("Keluhan / Catatan Tambahan (Opsional)") },
-                supportingText = { Text("${notes.length}/300") },
-                minLines = 3,
-                maxLines = 5,
-                modifier = Modifier.fillMaxWidth()
-            )
+                PawTextField(
+                    value = notes,
+                    onValueChange = { if (it.length <= 300) notes = it },
+                    label = "Keluhan / Catatan Tambahan (Opsional)",
+                    supportingText = "${notes.length}/300",
+                    singleLine = false,
+                    minLines = 3,
+                    maxLines = 5
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = {
-                    viewModel.createBooking(
-                        pet = selectedPet,
-                        serviceType = selectedService,
-                        date = selectedDate,
-                        timeSlot = selectedSlot,
-                        notes = notes,
-                        onSuccess = onNavigateBack
-                    )
-                },
-                enabled = !isSubmitting && selectedPet != null && selectedSlot != null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                if (isSubmitting) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("Konfirmasi Booking")
+                Button(
+                    onClick = {
+                        viewModel.createBooking(
+                            pet = selectedPet,
+                            serviceType = selectedService,
+                            date = selectedDate,
+                            timeSlot = selectedSlot,
+                            notes = notes,
+                            onSuccess = onNavigateBack
+                        )
+                    },
+                    enabled = !isSubmitting && selectedPet != null && selectedSlot != null,
+                    shape = PawButtonShape,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Text("Konfirmasi Booking", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

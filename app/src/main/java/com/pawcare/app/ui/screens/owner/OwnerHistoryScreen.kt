@@ -32,12 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Appointment
+import com.pawcare.app.data.model.AppointmentStatus
 import com.pawcare.app.data.model.MedicalRecord
+import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
+import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PetAvatar
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.OwnerViewModel
 
@@ -55,12 +60,24 @@ fun OwnerHistoryScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("Buku Medis (${medicalRecords.size})") }
+                text = {
+                    Text(
+                        text = "Buku Medis (${medicalRecords.size})",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("Riwayat Janji (${historyAppointments.size})") }
+                text = {
+                    Text(
+                        text = "Riwayat Janji (${historyAppointments.size})",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             )
         }
 
@@ -83,13 +100,15 @@ private fun MedicalRecordsTab(
             icon = Icons.Default.Description
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(records, key = { it.appointmentId }) { record ->
-                MedicalRecordCard(record = record, onClick = { onRecordClick(record.appointmentId) })
+        ResponsiveScreenBox {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(records, key = { it.appointmentId }) { record ->
+                    MedicalRecordCard(record = record, onClick = { onRecordClick(record.appointmentId) })
+                }
             }
         }
     }
@@ -104,6 +123,7 @@ private fun MedicalRecordCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = PawCardShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -112,32 +132,41 @@ private fun MedicalRecordCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 Text(
                     text = "${record.petName} • ${record.serviceTypeEnum.displayName}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Tanggal Periksa: ${record.visitDate}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Diagnosa: ${record.diagnosis}",
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (!record.vaccineName.isNullOrBlank()) {
                     Text(
                         text = "Vaksin: ${record.vaccineName}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
+            Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, contentDescription = "Detail")
         }
     }
@@ -155,48 +184,78 @@ private fun AppointmentsHistoryTab(
             icon = Icons.Default.History
         )
     } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(appointments, key = { it.appointmentId }) { apt ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = apt.statusEnum == com.pawcare.app.data.model.AppointmentStatus.COMPLETED) {
-                            onRecordClick(apt.appointmentId)
-                        },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Row(
+        ResponsiveScreenBox {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(appointments, key = { it.appointmentId }) { apt ->
+                    val isCompleted = apt.statusEnum == AppointmentStatus.COMPLETED
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .clickable(enabled = isCompleted) {
+                                onRecordClick(apt.appointmentId)
+                            },
+                        shape = PawCardShape,
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
-                        PetAvatar(species = apt.petSpeciesEnum, size = 40.dp)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "${apt.petName} • ${apt.serviceTypeEnum.displayName}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${apt.date} pukul ${apt.timeSlot}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                PetAvatar(species = apt.petSpeciesEnum, size = 40.dp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = apt.petName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = apt.serviceTypeEnum.displayName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                StatusBadge(status = apt.statusEnum)
+                            }
+                            AppointmentScheduleBanner(
+                                date = apt.date,
+                                timeSlot = apt.timeSlot
                             )
                             if (!apt.rejectionReason.isNullOrBlank()) {
                                 Text(
                                     text = "Alasan Batal: ${apt.rejectionReason}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
+                                    color = MaterialTheme.colorScheme.error,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else if (isCompleted) {
+                                Text(
+                                    text = "Ketuk untuk melihat rekam medis →",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
-                        StatusBadge(status = apt.statusEnum)
                     }
                 }
             }

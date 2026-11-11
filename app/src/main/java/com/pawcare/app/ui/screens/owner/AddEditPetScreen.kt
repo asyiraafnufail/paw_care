@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -26,12 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +47,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.PetSpecies
 import com.pawcare.app.ui.components.ErrorStateView
 import com.pawcare.app.ui.components.LoadingView
+import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCareConfirmDialog
+import com.pawcare.app.ui.components.PawChipShape
+import com.pawcare.app.ui.components.PawTextField
+import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.util.UiState
 import com.pawcare.app.viewmodel.OwnerViewModel
 
@@ -113,7 +118,12 @@ fun AddEditPetScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Data Hewan" else "Tambah Hewan") },
+                title = {
+                    Text(
+                        text = if (isEditing) "Edit Data Hewan" else "Tambah Hewan",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -122,10 +132,15 @@ fun AddEditPetScreen(
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Hapus",
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -137,99 +152,119 @@ fun AddEditPetScreen(
                 onRetry = { viewModel.loadPetForEdit(petId) },
                 modifier = Modifier.padding(padding)
             )
-            is UiState.Success -> Column(
+            is UiState.Success -> ResponsiveScreenBox(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .imePadding()
             ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nama Hewan *") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text("Jenis Hewan *", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PetSpecies.entries.forEach { species ->
-                        FilterChip(
-                            selected = selectedSpecies == species,
-                            onClick = { selectedSpecies = species },
-                            label = { Text(species.displayName) }
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = breed,
-                    onValueChange = { breed = it },
-                    label = { Text("Ras / Jenis (misal: Persia, Golden) *") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = ageMonthsText,
-                        onValueChange = { ageMonthsText = it },
-                        label = { Text("Umur (Bulan) *") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    OutlinedTextField(
-                        value = weightKgText,
-                        onValueChange = { weightKgText = it },
-                        label = { Text("Berat (Kg) *") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        viewModel.savePet(
-                            petId = petId,
-                            name = name,
-                            species = selectedSpecies,
-                            breed = breed,
-                            ageMonthsText = ageMonthsText,
-                            weightKgText = weightKgText,
-                            onSuccess = onNavigateBack
-                        )
-                    },
-                    enabled = !isSaving,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                        Text(if (isEditing) "Simpan Perubahan" else "Tambah Hewan")
-                    }
-                }
+                    PawTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = "Nama Hewan *",
+                        singleLine = true
+                    )
 
-                if (isEditing) {
-                    OutlinedButton(
-                        onClick = { showDeleteDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        modifier = Modifier.fillMaxWidth()
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Jenis Hewan *",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            PetSpecies.entries.forEach { species ->
+                                FilterChip(
+                                    selected = selectedSpecies == species,
+                                    onClick = { selectedSpecies = species },
+                                    shape = PawChipShape,
+                                    label = { Text(species.displayName) }
+                                )
+                            }
+                        }
+                    }
+
+                    PawTextField(
+                        value = breed,
+                        onValueChange = { breed = it },
+                        label = "Ras / Jenis (misal: Persia, Golden) *",
+                        singleLine = true
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Hapus Hewan Ini")
+                        PawTextField(
+                            value = ageMonthsText,
+                            onValueChange = { ageMonthsText = it },
+                            label = "Umur (Bulan) *",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        PawTextField(
+                            value = weightKgText,
+                            onValueChange = { weightKgText = it },
+                            label = "Berat (Kg) *",
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.savePet(
+                                petId = petId,
+                                name = name,
+                                species = selectedSpecies,
+                                breed = breed,
+                                ageMonthsText = ageMonthsText,
+                                weightKgText = weightKgText,
+                                onSuccess = onNavigateBack
+                            )
+                        },
+                        enabled = !isSaving,
+                        shape = PawButtonShape,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text(
+                                text = if (isEditing) "Simpan Perubahan" else "Tambah Hewan",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    if (isEditing) {
+                        OutlinedButton(
+                            onClick = { showDeleteDialog = true },
+                            shape = PawButtonShape,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Hapus Hewan Ini", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
