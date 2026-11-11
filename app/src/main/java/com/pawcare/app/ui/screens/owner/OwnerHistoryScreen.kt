@@ -2,6 +2,7 @@ package com.pawcare.app.ui.screens.owner
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -87,38 +88,51 @@ fun OwnerHistoryScreen(
             )
         }
 
-        val hasDataInActiveTab = if (selectedTab == 0) allRecords.isNotEmpty() else allHistoryAppointments.isNotEmpty()
-        if (hasDataInActiveTab) {
-            ResponsiveScreenBox(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                PawSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { viewModel.setHistorySearchQuery(it) },
-                    placeholder = if (selectedTab == 0) {
-                        "Cari hewan, diagnosa, atau vaksin..."
-                    } else {
-                        "Cari hewan, layanan, atau tanggal..."
-                    }
-                )
-            }
-        }
+        ResponsiveScreenBox(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                val hasDataInActiveTab = if (selectedTab == 0) allRecords.isNotEmpty() else allHistoryAppointments.isNotEmpty()
+                if (hasDataInActiveTab || searchQuery.isNotBlank()) {
+                    PawSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { viewModel.setHistorySearchQuery(it) },
+                        placeholder = if (selectedTab == 0) {
+                            "Cari hewan, diagnosa, atau vaksin..."
+                        } else {
+                            "Cari hewan, layanan, atau tanggal..."
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+                }
 
-        when (selectedTab) {
-            0 -> MedicalRecordsTab(
-                isLoading = isLoadingRecords,
-                hasAnyData = allRecords.isNotEmpty(),
-                records = filteredRecords,
-                fallbackOwnerEmail = viewModel.ownerEmail,
-                searchQuery = searchQuery,
-                onRecordClick = onRecordClick
-            )
-            1 -> AppointmentsHistoryTab(
-                isLoading = isLoadingAppointments,
-                hasAnyData = allHistoryAppointments.isNotEmpty(),
-                appointments = filteredHistoryAppointments,
-                fallbackOwnerEmail = viewModel.ownerEmail,
-                searchQuery = searchQuery,
-                onRecordClick = onRecordClick
-            )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    when (selectedTab) {
+                        0 -> MedicalRecordsTab(
+                            isLoading = isLoadingRecords,
+                            hasAnyData = allRecords.isNotEmpty(),
+                            records = filteredRecords,
+                            fallbackOwnerEmail = viewModel.ownerEmail,
+                            searchQuery = searchQuery,
+                            onRecordClick = onRecordClick
+                        )
+                        1 -> AppointmentsHistoryTab(
+                            isLoading = isLoadingAppointments,
+                            hasAnyData = allHistoryAppointments.isNotEmpty(),
+                            appointments = filteredHistoryAppointments,
+                            fallbackOwnerEmail = viewModel.ownerEmail,
+                            searchQuery = searchQuery,
+                            onRecordClick = onRecordClick
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -133,13 +147,11 @@ private fun MedicalRecordsTab(
     onRecordClick: (String) -> Unit
 ) {
     if (isLoading && !hasAnyData) {
-        ResponsiveScreenBox {
-            SkeletonCardList(
-                count = 3,
-                showBanner = false,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            )
-        }
+        SkeletonCardList(
+            count = 3,
+            showBanner = false,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        )
     } else if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Catatan Medis",
@@ -153,23 +165,21 @@ private fun MedicalRecordsTab(
             icon = Icons.Default.SearchOff
         )
     } else {
-        ResponsiveScreenBox {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    items = records,
-                    key = { it.appointmentId },
-                    contentType = { "medical_record_card" }
-                ) { record ->
-                    MedicalRecordCard(
-                        record = record,
-                        fallbackOwnerEmail = fallbackOwnerEmail,
-                        onClick = { onRecordClick(record.appointmentId) }
-                    )
-                }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(
+                items = records,
+                key = { it.appointmentId },
+                contentType = { "medical_record_card" }
+            ) { record ->
+                MedicalRecordCard(
+                    record = record,
+                    fallbackOwnerEmail = fallbackOwnerEmail,
+                    onClick = { onRecordClick(record.appointmentId) }
+                )
             }
         }
     }
@@ -245,13 +255,11 @@ private fun AppointmentsHistoryTab(
     onRecordClick: (String) -> Unit
 ) {
     if (isLoading && !hasAnyData) {
-        ResponsiveScreenBox {
-            SkeletonCardList(
-                count = 3,
-                showBanner = true,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            )
-        }
+        SkeletonCardList(
+            count = 3,
+            showBanner = true,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        )
     } else if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Riwayat Selesai",
@@ -265,82 +273,80 @@ private fun AppointmentsHistoryTab(
             icon = Icons.Default.SearchOff
         )
     } else {
-        ResponsiveScreenBox {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    items = appointments,
-                    key = { it.appointmentId },
-                    contentType = { "history_appointment_card" }
-                ) { apt ->
-                    val isCompleted = apt.statusEnum == AppointmentStatus.COMPLETED
-                    Card(
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(
+                items = appointments,
+                key = { it.appointmentId },
+                contentType = { "history_appointment_card" }
+            ) { apt ->
+                val isCompleted = apt.statusEnum == AppointmentStatus.COMPLETED
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = isCompleted) {
+                            onRecordClick(apt.appointmentId)
+                        },
+                    shape = PawCardShape,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = isCompleted) {
-                                onRecordClick(apt.appointmentId)
-                            },
-                        shape = PawCardShape,
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                            PetAvatar(species = apt.petSpeciesEnum, size = 40.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                PetAvatar(species = apt.petSpeciesEnum, size = 40.dp)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Text(
-                                        text = "${apt.petName} (${apt.petSpeciesEnum.displayName})",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = apt.serviceTypeEnum.displayName,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                StatusBadge(status = apt.statusEnum)
-                            }
-                            OwnerInfoRow(ownerEmail = apt.ownerEmail.ifBlank { fallbackOwnerEmail })
-                            AppointmentScheduleBanner(
-                                date = apt.date,
-                                timeSlot = apt.timeSlot
-                            )
-                            if (!apt.rejectionReason.isNullOrBlank()) {
                                 Text(
-                                    text = "Alasan Batal: ${apt.rejectionReason}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    maxLines = 2,
+                                    text = "${apt.petName} (${apt.petSpeciesEnum.displayName})",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                            } else if (isCompleted) {
                                 Text(
-                                    text = "Ketuk untuk melihat rekam medis →",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
+                                    text = apt.serviceTypeEnum.displayName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            StatusBadge(status = apt.statusEnum)
+                        }
+                        OwnerInfoRow(ownerEmail = apt.ownerEmail.ifBlank { fallbackOwnerEmail })
+                        AppointmentScheduleBanner(
+                            date = apt.date,
+                            timeSlot = apt.timeSlot
+                        )
+                        if (!apt.rejectionReason.isNullOrBlank()) {
+                            Text(
+                                text = "Alasan Batal: ${apt.rejectionReason}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (isCompleted) {
+                            Text(
+                                text = "Ketuk untuk melihat rekam medis →",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }

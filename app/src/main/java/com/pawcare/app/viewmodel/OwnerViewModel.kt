@@ -279,6 +279,11 @@ class OwnerViewModel(
     }
 
     fun deletePet(petId: String, onSuccess: () -> Unit) {
+        val hasActive = activeAppointments.value.any { it.petId == petId }
+        if (hasActive) {
+            _errorMessage.value = "Hewan ini masih memiliki janji temu aktif. Batalkan janji terlebih dahulu sebelum menghapus."
+            return
+        }
         viewModelScope.launch {
             _isSubmitting.value = true
             petRepository.deletePet(petId)

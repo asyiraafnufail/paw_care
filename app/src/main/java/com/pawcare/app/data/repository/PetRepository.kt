@@ -54,11 +54,17 @@ class FirebasePetRepository(
     }
 
     override suspend fun hasActiveAppointments(petId: String): Boolean {
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         return try {
-            val snapshot = firestore.collection("appointments")
-                .whereEqualTo("petId", petId)
-                .get()
-                .await()
+            val query = if (currentUid != null) {
+                firestore.collection("appointments")
+                    .whereEqualTo("ownerId", currentUid)
+                    .whereEqualTo("petId", petId)
+            } else {
+                firestore.collection("appointments")
+                    .whereEqualTo("petId", petId)
+            }
+            val snapshot = query.get().await()
             val activeStatuses = setOf(AppointmentStatus.PENDING.name, AppointmentStatus.CONFIRMED.name)
             snapshot.documents.any { doc ->
                 val status = doc.getString("status")
