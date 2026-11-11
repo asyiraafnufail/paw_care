@@ -37,8 +37,21 @@ class OwnerViewModel(
     private val medicalRecordRepository: MedicalRecordRepository
 ) : ViewModel() {
 
-    private val _isLoadingData = MutableStateFlow(true)
-    val isLoadingData: StateFlow<Boolean> = _isLoadingData.asStateFlow()
+    private val _isLoadingPets = MutableStateFlow(true)
+    val isLoadingPets: StateFlow<Boolean> = _isLoadingPets.asStateFlow()
+
+    private val _isLoadingAppointments = MutableStateFlow(true)
+    val isLoadingAppointments: StateFlow<Boolean> = _isLoadingAppointments.asStateFlow()
+
+    private val _isLoadingRecords = MutableStateFlow(true)
+    val isLoadingRecords: StateFlow<Boolean> = _isLoadingRecords.asStateFlow()
+
+    val isLoadingData: StateFlow<Boolean> = combine(
+        _isLoadingPets,
+        _isLoadingAppointments,
+        _isLoadingRecords
+    ) { p, a, r -> p || a || r }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     private val _selectedTab = MutableStateFlow(OwnerTab.PETS)
     val selectedTab: StateFlow<OwnerTab> = _selectedTab.asStateFlow()
@@ -76,24 +89,25 @@ class OwnerViewModel(
     }
 
     val pets: StateFlow<List<Pet>> = petRepository.getPetsForOwner(ownerId)
-        .onEach { _isLoadingData.value = false }
+        .onEach { _isLoadingPets.value = false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _petSearchQuery = MutableStateFlow("")
     val petSearchQuery: StateFlow<String> = _petSearchQuery.asStateFlow()
 
     val filteredPets: StateFlow<List<Pet>> = combine(pets, _petSearchQuery) { list, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         if (q.isEmpty()) list
         else list.filter {
-            it.name.lowercase().contains(q) ||
-                it.breed.lowercase().contains(q) ||
-                it.speciesEnum.displayName.lowercase().contains(q)
+            it.name.contains(q, ignoreCase = true) ||
+                it.breed.contains(q, ignoreCase = true) ||
+                it.speciesEnum.displayName.contains(q, ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val allOwnerAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getOwnerAppointments(ownerId)
+            .onEach { _isLoadingAppointments.value = false }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val activeAppointments: StateFlow<List<Appointment>> = allOwnerAppointments
@@ -111,12 +125,12 @@ class OwnerViewModel(
         activeAppointments,
         _bookingSearchQuery
     ) { list, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         if (q.isEmpty()) list
         else list.filter {
-            it.petName.lowercase().contains(q) ||
-                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
-                it.date.contains(q)
+            it.petName.contains(q, ignoreCase = true) ||
+                it.serviceTypeEnum.displayName.contains(q, ignoreCase = true) ||
+                it.date.contains(q, ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -129,6 +143,7 @@ class OwnerViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val medicalRecords: StateFlow<List<MedicalRecord>> = medicalRecordRepository.getRecordsForOwner(ownerId)
+        .onEach { _isLoadingRecords.value = false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _historySearchQuery = MutableStateFlow("")
@@ -138,13 +153,13 @@ class OwnerViewModel(
         medicalRecords,
         _historySearchQuery
     ) { list, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         if (q.isEmpty()) list
         else list.filter {
-            it.petName.lowercase().contains(q) ||
-                it.diagnosis.lowercase().contains(q) ||
-                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
-                (it.vaccineName?.lowercase()?.contains(q) == true)
+            it.petName.contains(q, ignoreCase = true) ||
+                it.diagnosis.contains(q, ignoreCase = true) ||
+                it.serviceTypeEnum.displayName.contains(q, ignoreCase = true) ||
+                (it.vaccineName?.contains(q, ignoreCase = true) == true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -152,12 +167,12 @@ class OwnerViewModel(
         historyAppointments,
         _historySearchQuery
     ) { list, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         if (q.isEmpty()) list
         else list.filter {
-            it.petName.lowercase().contains(q) ||
-                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
-                it.date.contains(q)
+            it.petName.contains(q, ignoreCase = true) ||
+                it.serviceTypeEnum.displayName.contains(q, ignoreCase = true) ||
+                it.date.contains(q, ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 

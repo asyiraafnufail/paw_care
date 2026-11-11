@@ -39,6 +39,7 @@ import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.AdminViewModel
 
@@ -50,8 +51,17 @@ fun AdminActivePatientsScreen(
     val allConfirmed by viewModel.confirmedAppointments.collectAsStateWithLifecycle()
     val filteredConfirmed by viewModel.filteredActiveAppointments.collectAsStateWithLifecycle()
     val searchQuery by viewModel.activePatientSearchQuery.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingActive.collectAsStateWithLifecycle()
 
-    if (allConfirmed.isEmpty()) {
+    if (isLoading && allConfirmed.isEmpty()) {
+        ResponsiveScreenBox {
+            SkeletonCardList(
+                count = 3,
+                showBanner = true,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
+    } else if (allConfirmed.isEmpty()) {
         EmptyStateView(
             title = "Belum Ada Pasien Aktif",
             message = "Janji temu yang telah disetujui akan muncul di sini menunggu pemeriksaan dokter hewan.",
@@ -82,7 +92,11 @@ fun AdminActivePatientsScreen(
                         contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(filteredConfirmed, key = { it.appointmentId }) { apt ->
+                        items(
+                            items = filteredConfirmed,
+                            key = { it.appointmentId },
+                            contentType = { "active_patient_card" }
+                        ) { apt ->
                             ActivePatientCard(
                                 appointment = apt,
                                 onInputRecordClick = { onInputRecordClick(apt.appointmentId) }

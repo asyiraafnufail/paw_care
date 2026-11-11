@@ -41,7 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Appointment
 import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
-import com.pawcare.app.ui.components.LoadingView
 import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCardShape
@@ -50,6 +49,7 @@ import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.RejectionReasonDialog
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.AdminViewModel
 
@@ -60,7 +60,7 @@ fun AdminQueueScreen(
     val pendingList by viewModel.filteredPendingAppointments.collectAsStateWithLifecycle()
     val availableDates by viewModel.availableQueueDates.collectAsStateWithLifecycle()
     val searchQuery by viewModel.queueSearchQuery.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoadingData.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingQueue.collectAsStateWithLifecycle()
     val selectedDateFilter by viewModel.selectedDateFilter.collectAsStateWithLifecycle()
 
     var appointmentToReject by remember { mutableStateOf<Appointment?>(null) }
@@ -118,7 +118,13 @@ fun AdminQueueScreen(
             }
 
             if (isLoading && pendingList.isEmpty() && searchQuery.isBlank()) {
-                LoadingView(modifier = Modifier.weight(1f))
+                SkeletonCardList(
+                    count = 3,
+                    showBanner = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             } else if (pendingList.isEmpty()) {
                 EmptyStateView(
                     title = if (searchQuery.isNotBlank()) "Antrean Tidak Ditemukan" else "Tidak Ada Antrean Baru",
@@ -138,7 +144,11 @@ fun AdminQueueScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(pendingList, key = { it.appointmentId }) { apt ->
+                    items(
+                        items = pendingList,
+                        key = { it.appointmentId },
+                        contentType = { "queue_card" }
+                    ) { apt ->
                         AdminQueueCard(
                             appointment = apt,
                             onApprove = { viewModel.confirmAppointment(apt.appointmentId) },

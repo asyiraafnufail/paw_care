@@ -4,11 +4,14 @@ import com.pawcare.app.data.model.Appointment
 import com.pawcare.app.data.model.AppointmentStatus
 import com.pawcare.app.data.model.PetSpecies
 import com.pawcare.app.data.model.ServiceType
+import com.pawcare.app.data.repository.AppointmentRepository
 import com.pawcare.app.data.repository.FakeAppointmentRepository
 import com.pawcare.app.data.repository.FakeMedicalRecordRepository
 import com.pawcare.app.ui.navigation.AdminTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -358,5 +361,50 @@ class AdminViewModelTest {
         assertFalse(viewModel.canNavigateTabBack.value)
 
         assertFalse(viewModel.navigateTabBack())
+    }
+
+    @Test
+    fun testLoadingStateTransitionsPerStream() = runTest {
+        val queueSharedFlow = MutableSharedFlow<List<Appointment>>()
+        val activeSharedFlow = MutableSharedFlow<List<Appointment>>()
+        val archiveSharedFlow = MutableSharedFlow<List<Appointment>>()
+
+        val customAptRepo = object : AppointmentRepository by appointmentRepo {
+            override fun getPendingAppointments(): Flow<List<Appointment>> = queueSharedFlow
+            override fun getConfirmedAppointments(): Flow<List<Appointment>> = activeSharedFlow
+            override fun getArchiveAppointments(): Flow<List<Appointment>> = archiveSharedFlow
+        }
+
+        val delayedVm = AdminViewModel(
+            appointmentRepository = customAptRepo,
+            medicalRecordRepository = medicalRecordRepo
+        )
+        advanceUntilIdle()
+
+        assertTrue(delayedVm.isLoadingQueue.value)
+        assertTrue(delayedVm.isLoadingActive.value)
+        assertTrue(delayedVm.isLoadingArchive.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        queueSharedFlow.emit(emptyList())
+        advanceUntilIdle()
+        assertFalse(delayedVm.isLoadingQueue.value)
+        assertTrue(delayedVm.isLoadingActive.value)
+        assertTrue(delayedVm.isLoadingArchive.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        activeSharedFlow.emit(emptyList())
+        advanceUntilIdle()
+        assertFalse(delayedVm.isLoadingQueue.value)
+        assertFalse(delayedVm.isLoadingActive.value)
+        assertTrue(delayedVm.isLoadingArchive.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        archiveSharedFlow.emit(emptyList())
+        advanceUntilIdle()
+        assertFalse(delayedVm.isLoadingQueue.value)
+        assertFalse(delayedVm.isLoadingActive.value)
+        assertFalse(delayedVm.isLoadingArchive.value)
+        assertFalse(delayedVm.isLoadingData.value)
     }
 }

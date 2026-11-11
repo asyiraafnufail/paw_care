@@ -2,17 +2,23 @@ package com.pawcare.app.viewmodel
 
 import com.pawcare.app.data.model.Appointment
 import com.pawcare.app.data.model.AppointmentStatus
+import com.pawcare.app.data.model.MedicalRecord
 import com.pawcare.app.data.model.Pet
 import com.pawcare.app.data.model.PetSpecies
 import com.pawcare.app.data.model.ServiceType
 import com.pawcare.app.data.model.User
+import com.pawcare.app.data.repository.AppointmentRepository
 import com.pawcare.app.data.repository.FakeAppointmentRepository
 import com.pawcare.app.data.repository.FakeAuthRepository
 import com.pawcare.app.data.repository.FakeMedicalRecordRepository
 import com.pawcare.app.data.repository.FakePetRepository
+import com.pawcare.app.data.repository.MedicalRecordRepository
+import com.pawcare.app.data.repository.PetRepository
 import com.pawcare.app.ui.navigation.OwnerTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -217,5 +223,53 @@ class OwnerViewModelTest {
         val popped3 = viewModel.navigateTabBack()
         assertFalse(popped3)
         assertEquals(OwnerTab.PETS, viewModel.selectedTab.value)
+    }
+
+    @Test
+    fun testLoadingStateTransitionsPerStream() = runTest {
+        val petsSharedFlow = MutableSharedFlow<List<Pet>>()
+        val aptsSharedFlow = MutableSharedFlow<List<Appointment>>()
+        val recordsSharedFlow = MutableSharedFlow<List<MedicalRecord>>()
+
+        val customPetRepo = object : PetRepository by petRepo {
+            override fun getPetsForOwner(ownerId: String): Flow<List<Pet>> = petsSharedFlow
+        }
+        val customAptRepo = object : AppointmentRepository by appointmentRepo {
+            override fun getOwnerAppointments(ownerId: String): Flow<List<Appointment>> = aptsSharedFlow
+        }
+        val customMedicalRepo = object : MedicalRecordRepository by medicalRepo {
+            override fun getRecordsForOwner(ownerId: String): Flow<List<MedicalRecord>> = recordsSharedFlow
+        }
+
+        val delayedVm = OwnerViewModel(
+            ownerId = currentUser.uid,
+            ownerEmail = currentUser.email,
+            petRepository = customPetRepo,
+            appointmentRepository = customAptRepo,
+            medicalRecordRepository = customMedicalRepo
+        )
+
+        assertTrue(delayedVm.isLoadingPets.value)
+        assertTrue(delayedVm.isLoadingAppointments.value)
+        assertTrue(delayedVm.isLoadingRecords.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        petsSharedFlow.emit(listOf(Pet(petId = "p1", name = "Kimi")))
+        assertFalse(delayedVm.isLoadingPets.value)
+        assertTrue(delayedVm.isLoadingAppointments.value)
+        assertTrue(delayedVm.isLoadingRecords.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        aptsSharedFlow.emit(emptyList())
+        assertFalse(delayedVm.isLoadingPets.value)
+        assertFalse(delayedVm.isLoadingAppointments.value)
+        assertTrue(delayedVm.isLoadingRecords.value)
+        assertTrue(delayedVm.isLoadingData.value)
+
+        recordsSharedFlow.emit(emptyList())
+        assertFalse(delayedVm.isLoadingPets.value)
+        assertFalse(delayedVm.isLoadingAppointments.value)
+        assertFalse(delayedVm.isLoadingRecords.value)
+        assertFalse(delayedVm.isLoadingData.value)
     }
 }

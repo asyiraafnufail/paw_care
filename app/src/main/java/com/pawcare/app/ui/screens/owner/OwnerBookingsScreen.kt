@@ -48,6 +48,7 @@ import com.pawcare.app.ui.components.PawCareConfirmDialog
 import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.OwnerViewModel
 
@@ -59,6 +60,7 @@ fun OwnerBookingsScreen(
     val allActiveBookings by viewModel.activeAppointments.collectAsStateWithLifecycle()
     val filteredBookings by viewModel.filteredActiveAppointments.collectAsStateWithLifecycle()
     val searchQuery by viewModel.bookingSearchQuery.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingAppointments.collectAsStateWithLifecycle()
     var appointmentToCancel by remember { mutableStateOf<Appointment?>(null) }
 
     if (appointmentToCancel != null) {
@@ -77,7 +79,15 @@ fun OwnerBookingsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (allActiveBookings.isEmpty()) {
+        if (isLoading && allActiveBookings.isEmpty()) {
+            ResponsiveScreenBox {
+                SkeletonCardList(
+                    count = 3,
+                    showBanner = true,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+        } else if (allActiveBookings.isEmpty()) {
             EmptyStateView(
                 title = "Tidak Ada Janji Temu Aktif",
                 message = "Anda belum memiliki booking periksa atau vaksinasi yang sedang berjalan.",
@@ -110,7 +120,11 @@ fun OwnerBookingsScreen(
                             contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 88.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(filteredBookings, key = { it.appointmentId }) { apt ->
+                            items(
+                                items = filteredBookings,
+                                key = { it.appointmentId },
+                                contentType = { "booking_card" }
+                            ) { apt ->
                                 BookingCard(
                                     appointment = apt,
                                     fallbackOwnerEmail = viewModel.ownerEmail,

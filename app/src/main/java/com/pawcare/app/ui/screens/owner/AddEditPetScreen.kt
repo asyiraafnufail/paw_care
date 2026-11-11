@@ -46,12 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.PetSpecies
 import com.pawcare.app.ui.components.ErrorStateView
-import com.pawcare.app.ui.components.LoadingView
 import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCareConfirmDialog
 import com.pawcare.app.ui.components.PawChipShape
 import com.pawcare.app.ui.components.PawTextField
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonDetailScreen
 import com.pawcare.app.util.UiState
 import com.pawcare.app.viewmodel.OwnerViewModel
 
@@ -146,7 +146,7 @@ fun AddEditPetScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         when (val state = editingPetState) {
-            is UiState.Loading -> LoadingView(modifier = Modifier.padding(padding))
+            is UiState.Loading -> SkeletonDetailScreen(modifier = Modifier.padding(padding))
             is UiState.Error -> ErrorStateView(
                 message = state.message,
                 onRetry = { viewModel.loadPetForEdit(petId) },

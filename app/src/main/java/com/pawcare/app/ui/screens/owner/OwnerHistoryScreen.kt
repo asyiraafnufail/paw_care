@@ -43,6 +43,7 @@ import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.OwnerViewModel
 
@@ -57,6 +58,8 @@ fun OwnerHistoryScreen(
     val allHistoryAppointments by viewModel.historyAppointments.collectAsStateWithLifecycle()
     val filteredHistoryAppointments by viewModel.filteredHistoryAppointments.collectAsStateWithLifecycle()
     val searchQuery by viewModel.historySearchQuery.collectAsStateWithLifecycle()
+    val isLoadingRecords by viewModel.isLoadingRecords.collectAsStateWithLifecycle()
+    val isLoadingAppointments by viewModel.isLoadingAppointments.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
@@ -101,6 +104,7 @@ fun OwnerHistoryScreen(
 
         when (selectedTab) {
             0 -> MedicalRecordsTab(
+                isLoading = isLoadingRecords,
                 hasAnyData = allRecords.isNotEmpty(),
                 records = filteredRecords,
                 fallbackOwnerEmail = viewModel.ownerEmail,
@@ -108,6 +112,7 @@ fun OwnerHistoryScreen(
                 onRecordClick = onRecordClick
             )
             1 -> AppointmentsHistoryTab(
+                isLoading = isLoadingAppointments,
                 hasAnyData = allHistoryAppointments.isNotEmpty(),
                 appointments = filteredHistoryAppointments,
                 fallbackOwnerEmail = viewModel.ownerEmail,
@@ -120,13 +125,22 @@ fun OwnerHistoryScreen(
 
 @Composable
 private fun MedicalRecordsTab(
+    isLoading: Boolean,
     hasAnyData: Boolean,
     records: List<MedicalRecord>,
     fallbackOwnerEmail: String,
     searchQuery: String,
     onRecordClick: (String) -> Unit
 ) {
-    if (!hasAnyData) {
+    if (isLoading && !hasAnyData) {
+        ResponsiveScreenBox {
+            SkeletonCardList(
+                count = 3,
+                showBanner = false,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
+    } else if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Catatan Medis",
             message = "Catatan medis, diagnosa dokter, dan riwayat vaksin anabul akan muncul di sini setelah pemeriksaan selesai.",
@@ -145,7 +159,11 @@ private fun MedicalRecordsTab(
                 contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(records, key = { it.appointmentId }) { record ->
+                items(
+                    items = records,
+                    key = { it.appointmentId },
+                    contentType = { "medical_record_card" }
+                ) { record ->
                     MedicalRecordCard(
                         record = record,
                         fallbackOwnerEmail = fallbackOwnerEmail,
@@ -219,13 +237,22 @@ private fun MedicalRecordCard(
 
 @Composable
 private fun AppointmentsHistoryTab(
+    isLoading: Boolean,
     hasAnyData: Boolean,
     appointments: List<Appointment>,
     fallbackOwnerEmail: String,
     searchQuery: String,
     onRecordClick: (String) -> Unit
 ) {
-    if (!hasAnyData) {
+    if (isLoading && !hasAnyData) {
+        ResponsiveScreenBox {
+            SkeletonCardList(
+                count = 3,
+                showBanner = true,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
+    } else if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Riwayat Selesai",
             message = "Janji temu yang telah selesai atau dibatalkan akan diarsipkan di sini.",
@@ -244,7 +271,11 @@ private fun AppointmentsHistoryTab(
                 contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(appointments, key = { it.appointmentId }) { apt ->
+                items(
+                    items = appointments,
+                    key = { it.appointmentId },
+                    contentType = { "history_appointment_card" }
+                ) { apt ->
                     val isCompleted = apt.statusEnum == AppointmentStatus.COMPLETED
                     Card(
                         modifier = Modifier

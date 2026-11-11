@@ -26,8 +26,21 @@ class AdminViewModel(
     private val medicalRecordRepository: MedicalRecordRepository
 ) : ViewModel() {
 
-    private val _isLoadingData = MutableStateFlow(true)
-    val isLoadingData: StateFlow<Boolean> = _isLoadingData.asStateFlow()
+    private val _isLoadingQueue = MutableStateFlow(true)
+    val isLoadingQueue: StateFlow<Boolean> = _isLoadingQueue.asStateFlow()
+
+    private val _isLoadingActive = MutableStateFlow(true)
+    val isLoadingActive: StateFlow<Boolean> = _isLoadingActive.asStateFlow()
+
+    private val _isLoadingArchive = MutableStateFlow(true)
+    val isLoadingArchive: StateFlow<Boolean> = _isLoadingArchive.asStateFlow()
+
+    val isLoadingData: StateFlow<Boolean> = combine(
+        _isLoadingQueue,
+        _isLoadingActive,
+        _isLoadingArchive
+    ) { q, a, ar -> q || a || ar }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     private val _selectedTab = MutableStateFlow(AdminTab.QUEUE)
     val selectedTab: StateFlow<AdminTab> = _selectedTab.asStateFlow()
@@ -59,7 +72,7 @@ class AdminViewModel(
 
     private val allPendingAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getPendingAppointments()
-            .onEach { _isLoadingData.value = false }
+            .onEach { _isLoadingQueue.value = false }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val availableQueueDates: StateFlow<List<String>> = allPendingAppointments
@@ -77,18 +90,19 @@ class AdminViewModel(
         _selectedDateFilter,
         _queueSearchQuery
     ) { list, dateFilter, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         list.filter { apt ->
             val matchesDate = dateFilter.isNullOrBlank() || apt.date == dateFilter
             val matchesQuery = q.isEmpty() ||
-                apt.petName.lowercase().contains(q) ||
-                apt.ownerEmail.lowercase().contains(q)
+                apt.petName.contains(q, ignoreCase = true) ||
+                apt.ownerEmail.contains(q, ignoreCase = true)
             matchesDate && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val confirmedAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getConfirmedAppointments()
+            .onEach { _isLoadingActive.value = false }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _activePatientSearchQuery = MutableStateFlow("")
@@ -98,17 +112,18 @@ class AdminViewModel(
         confirmedAppointments,
         _activePatientSearchQuery
     ) { list, query ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         if (q.isEmpty()) list
         else list.filter {
-            it.petName.lowercase().contains(q) ||
-                it.ownerEmail.lowercase().contains(q) ||
-                it.serviceTypeEnum.displayName.lowercase().contains(q)
+            it.petName.contains(q, ignoreCase = true) ||
+                it.ownerEmail.contains(q, ignoreCase = true) ||
+                it.serviceTypeEnum.displayName.contains(q, ignoreCase = true)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val allArchiveAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getArchiveAppointments()
+            .onEach { _isLoadingArchive.value = false }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -122,12 +137,12 @@ class AdminViewModel(
         _searchQuery,
         _archiveStatusFilter
     ) { list, query, statusFilter ->
-        val q = query.trim().lowercase()
+        val q = query.trim()
         list.filter { apt ->
             val matchesStatus = statusFilter == null || apt.status == statusFilter.name
             val matchesQuery = q.isEmpty() ||
-                apt.petName.lowercase().contains(q) ||
-                apt.ownerEmail.lowercase().contains(q)
+                apt.petName.contains(q, ignoreCase = true) ||
+                apt.ownerEmail.contains(q, ignoreCase = true)
             matchesStatus && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

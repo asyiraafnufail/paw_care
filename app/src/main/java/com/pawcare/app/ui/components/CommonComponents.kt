@@ -1,5 +1,11 @@
 package com.pawcare.app.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,8 +21,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
@@ -27,6 +36,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,7 +54,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -308,6 +321,213 @@ fun LoadingView(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator()
+    }
+}
+
+@Composable
+fun rememberShimmerBrush(): Brush {
+    val transition = rememberInfiniteTransition(label = "shimmer_transition")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_offset"
+    )
+    val base = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val highlight = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+    return Brush.linearGradient(
+        colors = listOf(base, highlight, base),
+        start = Offset(translateAnim - 350f, translateAnim - 350f),
+        end = Offset(translateAnim, translateAnim)
+    )
+}
+
+@Composable
+fun SkeletonBox(
+    brush: Brush,
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(8.dp)
+) {
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(brush)
+    )
+}
+
+@Composable
+fun SkeletonCardList(
+    modifier: Modifier = Modifier,
+    count: Int = 3,
+    showBanner: Boolean = false
+) {
+    val shimmerBrush = rememberShimmerBrush()
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        repeat(count) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = PawCardShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SkeletonBox(
+                            brush = shimmerBrush,
+                            modifier = Modifier.size(if (showBanner) 44.dp else 52.dp),
+                            shape = CircleShape
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SkeletonBox(
+                                brush = shimmerBrush,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.55f)
+                                    .height(18.dp)
+                            )
+                            SkeletonBox(
+                                brush = shimmerBrush,
+                                modifier = Modifier
+                                    .fillMaxWidth(0.35f)
+                                    .height(14.dp)
+                            )
+                        }
+                        if (showBanner) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            SkeletonBox(
+                                brush = shimmerBrush,
+                                modifier = Modifier
+                                    .width(64.dp)
+                                    .height(24.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    SkeletonBox(
+                        brush = shimmerBrush,
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(14.dp)
+                    )
+
+                    if (showBanner) {
+                        SkeletonBox(
+                            brush = shimmerBrush,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp),
+                            shape = PawChipShape
+                        )
+                    } else {
+                        SkeletonBox(
+                            brush = shimmerBrush,
+                            modifier = Modifier
+                                .fillMaxWidth(0.7f)
+                                .height(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SkeletonDetailScreen(modifier: Modifier = Modifier) {
+    val shimmerBrush = rememberShimmerBrush()
+    ResponsiveScreenBox(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = PawCardShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SkeletonBox(
+                        brush = shimmerBrush,
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .height(24.dp)
+                    )
+                    SkeletonBox(
+                        brush = shimmerBrush,
+                        modifier = Modifier
+                            .fillMaxWidth(0.65f)
+                            .height(16.dp)
+                    )
+                    SkeletonBox(
+                        brush = shimmerBrush,
+                        modifier = Modifier
+                            .fillMaxWidth(0.45f)
+                            .height(14.dp)
+                    )
+                    SkeletonBox(
+                        brush = shimmerBrush,
+                        modifier = Modifier
+                            .fillMaxWidth(0.55f)
+                            .height(14.dp)
+                    )
+                }
+            }
+
+            repeat(3) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = PawCardShape,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SkeletonBox(
+                            brush = shimmerBrush,
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .height(16.dp)
+                        )
+                        SkeletonBox(
+                            brush = shimmerBrush,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

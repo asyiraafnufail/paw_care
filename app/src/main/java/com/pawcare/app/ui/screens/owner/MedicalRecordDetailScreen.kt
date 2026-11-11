@@ -31,9 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.ErrorStateView
-import com.pawcare.app.ui.components.LoadingView
 import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonDetailScreen
 import com.pawcare.app.util.UiState
 import com.pawcare.app.viewmodel.MedicalRecordDetailViewModel
 
@@ -64,7 +64,7 @@ fun MedicalRecordDetailScreen(
         }
     ) { padding ->
         when (val state = recordState) {
-            is UiState.Loading -> LoadingView(modifier = Modifier.padding(padding))
+            is UiState.Loading -> SkeletonDetailScreen(modifier = Modifier.padding(padding))
             is UiState.Error -> ErrorStateView(
                 message = state.message,
                 onRetry = { viewModel.loadRecord(appointmentId) },

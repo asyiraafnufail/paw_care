@@ -36,12 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Pet
 import com.pawcare.app.ui.components.EmptyStateView
-import com.pawcare.app.ui.components.LoadingView
 import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.viewmodel.OwnerViewModel
 
 @Composable
@@ -53,11 +53,17 @@ fun PetsScreen(
     val allPets by viewModel.pets.collectAsStateWithLifecycle()
     val filteredPets by viewModel.filteredPets.collectAsStateWithLifecycle()
     val searchQuery by viewModel.petSearchQuery.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoadingData.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingPets.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading && allPets.isEmpty()) {
-            LoadingView()
+            ResponsiveScreenBox {
+                SkeletonCardList(
+                    count = 4,
+                    showBanner = false,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
         } else if (allPets.isEmpty()) {
             EmptyStateView(
                 title = "Belum Ada Hewan Peliharaan",
@@ -91,7 +97,11 @@ fun PetsScreen(
                             contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 88.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(filteredPets, key = { it.petId }) { pet ->
+                            items(
+                                items = filteredPets,
+                                key = { it.petId },
+                                contentType = { "pet_card" }
+                            ) { pet ->
                                 PetCard(
                                     pet = pet,
                                     ownerEmail = viewModel.ownerEmail,

@@ -71,6 +71,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+private val DATE_BANNER_FORMATTER = DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreateBookingScreen(
@@ -277,7 +279,7 @@ fun CreateBookingScreen(
                             Icon(Icons.Default.CalendarToday, contentDescription = null)
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy")),
+                                text = remember(selectedDate) { selectedDate.format(DATE_BANNER_FORMATTER) },
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -293,12 +295,13 @@ fun CreateBookingScreen(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
+                    val now = remember(selectedDate, bookedSlots) { LocalDateTime.now() }
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Validators.CLINIC_TIME_SLOTS.forEach { slot ->
-                            val isPast = Validators.isSlotPastForDate(selectedDate, slot, LocalDateTime.now())
+                            val isPast = Validators.isSlotPastForDate(selectedDate, slot, now)
                             val isBooked = bookedSlots.contains(slot)
                             val isEnabled = !isPast && !isBooked
 

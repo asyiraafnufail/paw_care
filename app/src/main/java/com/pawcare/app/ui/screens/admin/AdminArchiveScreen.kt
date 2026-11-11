@@ -40,6 +40,7 @@ import com.pawcare.app.ui.components.PawChipShape
 import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
+import com.pawcare.app.ui.components.SkeletonCardList
 import com.pawcare.app.ui.components.StatusBadge
 import com.pawcare.app.viewmodel.AdminViewModel
 
@@ -52,6 +53,7 @@ fun AdminArchiveScreen(
     val archiveList by viewModel.filteredArchiveAppointments.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val statusFilter by viewModel.archiveStatusFilter.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingArchive.collectAsStateWithLifecycle()
 
     ResponsiveScreenBox {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -93,7 +95,15 @@ fun AdminArchiveScreen(
                 }
             }
 
-            if (archiveList.isEmpty()) {
+            if (isLoading && archiveList.isEmpty() && searchQuery.isBlank()) {
+                SkeletonCardList(
+                    count = 4,
+                    showBanner = true,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            } else if (archiveList.isEmpty()) {
                 EmptyStateView(
                     title = "Arsip Kosong",
                     message = if (searchQuery.isNotBlank()) "Tidak ditemukan hasil untuk \"$searchQuery\"." else "Belum ada riwayat janji temu yang selesai atau dibatalkan.",
@@ -108,7 +118,11 @@ fun AdminArchiveScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(archiveList, key = { it.appointmentId }) { apt ->
+                    items(
+                        items = archiveList,
+                        key = { it.appointmentId },
+                        contentType = { "archive_card" }
+                    ) { apt ->
                         ArchiveCard(
                             appointment = apt,
                             onClick = {
