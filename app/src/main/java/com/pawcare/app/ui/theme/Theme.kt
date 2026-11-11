@@ -28,10 +28,14 @@ private val LightColorScheme = lightColorScheme(
     secondaryContainer = PawSecondaryContainer,
     onSecondaryContainer = PawOnSecondaryContainer,
     background = PawBackground,
+    onBackground = Color(0xFF191C1A),
     surface = PawSurface,
+    onSurface = Color(0xFF191C1A),
     surfaceVariant = PawSurfaceVariant,
+    onSurfaceVariant = Color(0xFF3F4946),
     outline = PawOutline,
-    error = StatusCancelledColor
+    error = StatusCancelledColor,
+    onError = Color(0xFFFFFFFF)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -41,11 +45,17 @@ private val DarkColorScheme = darkColorScheme(
     onPrimaryContainer = Color(0xFFE8F5E9),
     secondary = Color(0xFF81D4FA),
     onSecondary = Color(0xFF01579B),
+    secondaryContainer = Color(0xFF0288D1),
+    onSecondaryContainer = Color(0xFFE1F5FE),
     background = Color(0xFF121212),
+    onBackground = Color(0xFFE1E3DF),
     surface = Color(0xFF1E1E1E),
+    onSurface = Color(0xFFE1E3DF),
     surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = Color(0xFFBFC9C2),
     outline = Color(0xFF757575),
-    error = Color(0xFFEF9A9A)
+    error = Color(0xFFEF9A9A),
+    onError = Color(0xFF601410)
 )
 
 @Composable

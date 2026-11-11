@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -18,10 +20,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,114 +71,129 @@ fun LoginScreen(
         }
     }
 
-    ResponsiveScreenBox(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding(),
-        contentAlignment = Alignment.Center
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Column(
+        ResponsiveScreenBox(
             modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding(),
+            contentAlignment = Alignment.Center
         ) {
-            PawCareLogoBadge(size = 76.dp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Masuk ke PawCare",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Silakan login menggunakan email & password",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            PawTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    viewModel.clearErrors()
-                },
-                label = "Email",
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                isError = uiState.emailError != null,
-                supportingText = uiState.emailError,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            PawTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    viewModel.clearErrors()
-                },
-                label = "Password",
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (passwordVisible) "Sembunyikan sandi" else "Tampilkan sandi"
-                        )
-                    }
-                },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = uiState.passwordError != null,
-                supportingText = uiState.passwordError,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true
-            )
-
-            if (uiState.generalError != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = uiState.generalError ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = { viewModel.signIn(email, password) },
-                enabled = !uiState.isLoading,
-                shape = PawButtonShape,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                PawCareLogoBadge(size = 76.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Masuk ke PawCare",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Silakan login menggunakan email & password",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                PawTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        viewModel.clearErrors()
+                    },
+                    label = "Email",
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    isError = uiState.emailError != null,
+                    supportingText = uiState.emailError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                PawTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        viewModel.clearErrors()
+                    },
+                    label = "Password",
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (passwordVisible) "Sembunyikan sandi" else "Tampilkan sandi"
+                            )
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    isError = uiState.passwordError != null,
+                    supportingText = uiState.passwordError,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true
+                )
+
+                if (uiState.generalError != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = uiState.generalError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
                     )
-                } else {
-                    Text("Masuk", fontWeight = FontWeight.SemiBold)
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            TextButton(
-                onClick = onNavigateToRegister,
-                shape = PawButtonShape
-            ) {
-                Text("Belum punya akun? Daftar di sini")
+                Button(
+                    onClick = { viewModel.signIn(email, password) },
+                    enabled = !uiState.isLoading,
+                    shape = PawButtonShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Masuk", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(
+                    onClick = onNavigateToRegister,
+                    shape = PawButtonShape,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Belum punya akun? Daftar di sini")
+                }
             }
         }
     }
