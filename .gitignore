@@ -1,0 +1,29 @@
+# Built application files
+*.apk
+*.aab
+*.dex
+
+# Gradle files
+.gradle/
+build/
+app/build/
+
+# Local configuration & secrets (NEVER COMMIT)
+local.properties
+.env*
+*google-services.json
+!app/google-services.json.example
+*.keystore
+*.jks
+.DS_Store
+Thumbs.db
+
+# IDE configuration
+.idea/
+*.iml
+.vscode/
+
+# Scratch & Tool sessions
+.superpowers/
+read_pdf.swift
+start_ui.sh
