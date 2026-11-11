@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -36,7 +37,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Pet
 import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.LoadingView
+import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.viewmodel.OwnerViewModel
@@ -47,13 +50,15 @@ fun PetsScreen(
     onAddPetClick: () -> Unit,
     onEditPetClick: (String) -> Unit
 ) {
-    val pets by viewModel.pets.collectAsStateWithLifecycle()
+    val allPets by viewModel.pets.collectAsStateWithLifecycle()
+    val filteredPets by viewModel.filteredPets.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.petSearchQuery.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingData.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isLoading && pets.isEmpty()) {
+        if (isLoading && allPets.isEmpty()) {
             LoadingView()
-        } else if (pets.isEmpty()) {
+        } else if (allPets.isEmpty()) {
             EmptyStateView(
                 title = "Belum Ada Hewan Peliharaan",
                 message = "Daftarkan anabul Anda untuk memudahkan booking vaksinasi dan pemeriksaan kesehatan.",
@@ -63,19 +68,43 @@ fun PetsScreen(
             )
         } else {
             ResponsiveScreenBox {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(pets, key = { it.petId }) { pet ->
-                        PetCard(pet = pet, onClick = { onEditPetClick(pet.petId) })
+                Column(modifier = Modifier.fillMaxSize()) {
+                    PawSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { viewModel.setPetSearchQuery(it) },
+                        placeholder = "Cari nama hewan, jenis, atau ras...",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+
+                    if (filteredPets.isEmpty()) {
+                        EmptyStateView(
+                            title = "Hewan Tidak Ditemukan",
+                            message = "Tidak ada hewan peliharaan yang cocok dengan \"$searchQuery\".",
+                            icon = Icons.Default.SearchOff,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filteredPets, key = { it.petId }) { pet ->
+                                PetCard(
+                                    pet = pet,
+                                    ownerEmail = viewModel.ownerEmail,
+                                    onClick = { onEditPetClick(pet.petId) }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
-        if (pets.isNotEmpty()) {
+        if (allPets.isNotEmpty()) {
             FloatingActionButton(
                 onClick = onAddPetClick,
                 shape = RoundedCornerShape(16.dp),
@@ -92,6 +121,7 @@ fun PetsScreen(
 @Composable
 fun PetCard(
     pet: Pet,
+    ownerEmail: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -120,6 +150,7 @@ fun PetCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                OwnerInfoRow(ownerEmail = ownerEmail)
                 Text(
                     text = "${pet.speciesEnum.displayName} • ${pet.breed}",
                     style = MaterialTheme.typography.bodyMedium,

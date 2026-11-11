@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +36,7 @@ import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
@@ -45,9 +47,11 @@ fun AdminActivePatientsScreen(
     viewModel: AdminViewModel,
     onInputRecordClick: (String) -> Unit
 ) {
-    val confirmedList by viewModel.confirmedAppointments.collectAsStateWithLifecycle()
+    val allConfirmed by viewModel.confirmedAppointments.collectAsStateWithLifecycle()
+    val filteredConfirmed by viewModel.filteredActiveAppointments.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.activePatientSearchQuery.collectAsStateWithLifecycle()
 
-    if (confirmedList.isEmpty()) {
+    if (allConfirmed.isEmpty()) {
         EmptyStateView(
             title = "Belum Ada Pasien Aktif",
             message = "Janji temu yang telah disetujui akan muncul di sini menunggu pemeriksaan dokter hewan.",
@@ -55,16 +59,36 @@ fun AdminActivePatientsScreen(
         )
     } else {
         ResponsiveScreenBox {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(confirmedList, key = { it.appointmentId }) { apt ->
-                    ActivePatientCard(
-                        appointment = apt,
-                        onInputRecordClick = { onInputRecordClick(apt.appointmentId) }
+            Column(modifier = Modifier.fillMaxSize()) {
+                PawSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setActivePatientSearchQuery(it) },
+                    placeholder = "Cari pasien aktif, layanan, atau email pemilik...",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+
+                if (filteredConfirmed.isEmpty()) {
+                    EmptyStateView(
+                        title = "Pasien Tidak Ditemukan",
+                        message = "Tidak ada pasien aktif yang cocok dengan \"$searchQuery\".",
+                        icon = Icons.Default.SearchOff,
+                        modifier = Modifier.weight(1f)
                     )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredConfirmed, key = { it.appointmentId }) { apt ->
+                            ActivePatientCard(
+                                appointment = apt,
+                                onInputRecordClick = { onInputRecordClick(apt.appointmentId) }
+                            )
+                        }
+                    }
                 }
             }
         }

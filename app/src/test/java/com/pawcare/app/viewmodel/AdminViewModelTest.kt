@@ -6,6 +6,7 @@ import com.pawcare.app.data.model.PetSpecies
 import com.pawcare.app.data.model.ServiceType
 import com.pawcare.app.data.repository.FakeAppointmentRepository
 import com.pawcare.app.data.repository.FakeMedicalRecordRepository
+import com.pawcare.app.ui.navigation.AdminTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -267,5 +268,95 @@ class AdminViewModelTest {
 
         assertEquals(1, viewModel.filteredPendingAppointments.value.size)
         assertEquals(listOf("2026-11-20", "2026-11-21"), viewModel.availableQueueDates.value)
+    }
+
+    @Test
+    fun testQueueSearch_FiltersByPetNameOrOwnerEmail() = runTest {
+        val apt1 = Appointment(
+            appointmentId = "apt-1",
+            ownerEmail = "budi@mail.com",
+            petName = "Luna",
+            date = "2026-11-20",
+            status = AppointmentStatus.PENDING.name
+        )
+        val apt2 = Appointment(
+            appointmentId = "apt-2",
+            ownerEmail = "siti@mail.com",
+            petName = "Rocky",
+            date = "2026-11-20",
+            status = AppointmentStatus.PENDING.name
+        )
+        appointmentRepo.saveAppointmentDirect(apt1)
+        appointmentRepo.saveAppointmentDirect(apt2)
+        advanceUntilIdle()
+
+        viewModel.setQueueSearchQuery("luna")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.filteredPendingAppointments.value.size)
+        assertEquals("Luna", viewModel.filteredPendingAppointments.value[0].petName)
+
+        viewModel.setQueueSearchQuery("siti@mail.com")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.filteredPendingAppointments.value.size)
+        assertEquals("Rocky", viewModel.filteredPendingAppointments.value[0].petName)
+    }
+
+    @Test
+    fun testActivePatientsSearch_FiltersConfirmedAppointments() = runTest {
+        val apt1 = Appointment(
+            appointmentId = "apt-1",
+            ownerEmail = "owner1@mail.com",
+            petName = "Coco",
+            status = AppointmentStatus.CONFIRMED.name,
+            date = "2026-11-20"
+        )
+        val apt2 = Appointment(
+            appointmentId = "apt-2",
+            ownerEmail = "owner2@mail.com",
+            petName = "Milo",
+            status = AppointmentStatus.CONFIRMED.name,
+            date = "2026-11-20"
+        )
+        appointmentRepo.saveAppointmentDirect(apt1)
+        appointmentRepo.saveAppointmentDirect(apt2)
+        advanceUntilIdle()
+
+        viewModel.setActivePatientSearchQuery("coco")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.filteredActiveAppointments.value.size)
+        assertEquals("Coco", viewModel.filteredActiveAppointments.value[0].petName)
+
+        viewModel.setActivePatientSearchQuery("owner2")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.filteredActiveAppointments.value.size)
+        assertEquals("Milo", viewModel.filteredActiveAppointments.value[0].petName)
+
+        viewModel.setActivePatientSearchQuery("")
+        advanceUntilIdle()
+        assertEquals(2, viewModel.filteredActiveAppointments.value.size)
+    }
+
+    @Test
+    fun testTabSelectionAndBackStackNavigation() = runTest {
+        assertEquals(AdminTab.QUEUE, viewModel.selectedTab.value)
+        assertFalse(viewModel.canNavigateTabBack.value)
+
+        viewModel.setSelectedTab(AdminTab.ACTIVE)
+        assertEquals(AdminTab.ACTIVE, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        viewModel.setSelectedTab(AdminTab.ARCHIVE)
+        assertEquals(AdminTab.ARCHIVE, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        assertTrue(viewModel.navigateTabBack())
+        assertEquals(AdminTab.ACTIVE, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        assertTrue(viewModel.navigateTabBack())
+        assertEquals(AdminTab.QUEUE, viewModel.selectedTab.value)
+        assertFalse(viewModel.canNavigateTabBack.value)
+
+        assertFalse(viewModel.navigateTabBack())
     }
 }

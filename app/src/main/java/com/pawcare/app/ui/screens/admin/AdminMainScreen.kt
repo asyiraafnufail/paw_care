@@ -1,5 +1,6 @@
 package com.pawcare.app.ui.screens.admin
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -41,9 +42,14 @@ fun AdminMainScreen(
     onNavigateToMedicalDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
-    var currentTab by remember { mutableStateOf(AdminTab.QUEUE) }
+    val currentTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val canNavigateTabBack by viewModel.canNavigateTabBack.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    BackHandler(enabled = canNavigateTabBack) {
+        viewModel.navigateTabBack()
+    }
 
     val actionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -100,19 +106,19 @@ fun AdminMainScreen(
             NavigationBar {
                 NavigationBarItem(
                     selected = currentTab == AdminTab.QUEUE,
-                    onClick = { currentTab = AdminTab.QUEUE },
+                    onClick = { viewModel.setSelectedTab(AdminTab.QUEUE) },
                     icon = { Icon(Icons.Default.FormatListBulleted, contentDescription = null) },
                     label = { Text(AdminTab.QUEUE.title) }
                 )
                 NavigationBarItem(
                     selected = currentTab == AdminTab.ACTIVE,
-                    onClick = { currentTab = AdminTab.ACTIVE },
+                    onClick = { viewModel.setSelectedTab(AdminTab.ACTIVE) },
                     icon = { Icon(Icons.Default.LocalHospital, contentDescription = null) },
                     label = { Text(AdminTab.ACTIVE.title) }
                 )
                 NavigationBarItem(
                     selected = currentTab == AdminTab.ARCHIVE,
-                    onClick = { currentTab = AdminTab.ARCHIVE },
+                    onClick = { viewModel.setSelectedTab(AdminTab.ARCHIVE) },
                     icon = { Icon(Icons.Default.Archive, contentDescription = null) },
                     label = { Text(AdminTab.ARCHIVE.title) }
                 )

@@ -17,13 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +37,7 @@ import com.pawcare.app.ui.components.EmptyStateView
 import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawChipShape
-import com.pawcare.app.ui.components.PawTextField
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
@@ -64,20 +60,10 @@ fun AdminArchiveScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                PawTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.setSearchQuery(it) },
-                    label = "Cari Arsip",
-                    placeholder = "Nama anabul atau email pemilik...",
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Bersihkan")
-                            }
-                        }
-                    },
-                    singleLine = true
+                PawSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setSearchQuery(it) },
+                    placeholder = "Cari nama anabul atau email pemilik..."
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))

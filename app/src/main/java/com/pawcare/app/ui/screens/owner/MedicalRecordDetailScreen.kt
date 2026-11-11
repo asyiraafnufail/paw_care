@@ -113,6 +113,12 @@ fun MedicalRecordDetailScreen(
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
+                                    Text(
+                                        text = "Pemilik: ${r.ownerEmail.ifBlank { "-" }}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Tanggal Periksa: ${r.visitDate}",

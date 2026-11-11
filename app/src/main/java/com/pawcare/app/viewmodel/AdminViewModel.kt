@@ -7,6 +7,7 @@ import com.pawcare.app.data.model.AppointmentStatus
 import com.pawcare.app.data.model.MedicalRecord
 import com.pawcare.app.data.repository.AppointmentRepository
 import com.pawcare.app.data.repository.MedicalRecordRepository
+import com.pawcare.app.ui.navigation.AdminTab
 import com.pawcare.app.util.UiState
 import com.pawcare.app.util.Validators
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,34 @@ class AdminViewModel(
     private val _isLoadingData = MutableStateFlow(true)
     val isLoadingData: StateFlow<Boolean> = _isLoadingData.asStateFlow()
 
+    private val _selectedTab = MutableStateFlow(AdminTab.QUEUE)
+    val selectedTab: StateFlow<AdminTab> = _selectedTab.asStateFlow()
+
+    private val _tabBackStack = mutableListOf<AdminTab>()
+
+    private val _canNavigateTabBack = MutableStateFlow(false)
+    val canNavigateTabBack: StateFlow<Boolean> = _canNavigateTabBack.asStateFlow()
+
+    fun setSelectedTab(tab: AdminTab) {
+        val current = _selectedTab.value
+        if (tab == current) return
+        if (tab == AdminTab.QUEUE) {
+            _tabBackStack.clear()
+        } else {
+            _tabBackStack.remove(current)
+            _tabBackStack.add(current)
+        }
+        _selectedTab.value = tab
+        _canNavigateTabBack.value = _tabBackStack.isNotEmpty()
+    }
+
+    fun navigateTabBack(): Boolean {
+        val prev = _tabBackStack.removeLastOrNull() ?: return false
+        _selectedTab.value = prev
+        _canNavigateTabBack.value = _tabBackStack.isNotEmpty()
+        return true
+    }
+
     private val allPendingAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getPendingAppointments()
             .onEach { _isLoadingData.value = false }
@@ -40,17 +69,43 @@ class AdminViewModel(
     private val _selectedDateFilter = MutableStateFlow<String?>(null)
     val selectedDateFilter: StateFlow<String?> = _selectedDateFilter.asStateFlow()
 
+    private val _queueSearchQuery = MutableStateFlow("")
+    val queueSearchQuery: StateFlow<String> = _queueSearchQuery.asStateFlow()
+
     val filteredPendingAppointments: StateFlow<List<Appointment>> = combine(
         allPendingAppointments,
-        _selectedDateFilter
-    ) { list, dateFilter ->
-        if (dateFilter.isNullOrBlank()) list
-        else list.filter { it.date == dateFilter }
+        _selectedDateFilter,
+        _queueSearchQuery
+    ) { list, dateFilter, query ->
+        val q = query.trim().lowercase()
+        list.filter { apt ->
+            val matchesDate = dateFilter.isNullOrBlank() || apt.date == dateFilter
+            val matchesQuery = q.isEmpty() ||
+                apt.petName.lowercase().contains(q) ||
+                apt.ownerEmail.lowercase().contains(q)
+            matchesDate && matchesQuery
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val confirmedAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getConfirmedAppointments()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _activePatientSearchQuery = MutableStateFlow("")
+    val activePatientSearchQuery: StateFlow<String> = _activePatientSearchQuery.asStateFlow()
+
+    val filteredActiveAppointments: StateFlow<List<Appointment>> = combine(
+        confirmedAppointments,
+        _activePatientSearchQuery
+    ) { list, query ->
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) list
+        else list.filter {
+            it.petName.lowercase().contains(q) ||
+                it.ownerEmail.lowercase().contains(q) ||
+                it.serviceTypeEnum.displayName.lowercase().contains(q)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val allArchiveAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getArchiveAppointments()
@@ -105,6 +160,14 @@ class AdminViewModel(
 
     fun setDateFilter(date: String?) {
         _selectedDateFilter.value = date
+    }
+
+    fun setQueueSearchQuery(query: String) {
+        _queueSearchQuery.value = query
+    }
+
+    fun setActivePatientSearchQuery(query: String) {
+        _activePatientSearchQuery.value = query
     }
 
     fun setSearchQuery(query: String) {

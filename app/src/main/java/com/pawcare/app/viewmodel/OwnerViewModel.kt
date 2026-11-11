@@ -11,6 +11,7 @@ import com.pawcare.app.data.model.ServiceType
 import com.pawcare.app.data.repository.AppointmentRepository
 import com.pawcare.app.data.repository.MedicalRecordRepository
 import com.pawcare.app.data.repository.PetRepository
+import com.pawcare.app.ui.navigation.OwnerTab
 import com.pawcare.app.util.UiState
 import com.pawcare.app.util.Validators
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -29,7 +31,7 @@ import java.time.LocalDateTime
 @OptIn(ExperimentalCoroutinesApi::class)
 class OwnerViewModel(
     private val ownerId: String,
-    private val ownerEmail: String,
+    val ownerEmail: String,
     private val petRepository: PetRepository,
     private val appointmentRepository: AppointmentRepository,
     private val medicalRecordRepository: MedicalRecordRepository
@@ -38,9 +40,57 @@ class OwnerViewModel(
     private val _isLoadingData = MutableStateFlow(true)
     val isLoadingData: StateFlow<Boolean> = _isLoadingData.asStateFlow()
 
+    private val _selectedTab = MutableStateFlow(OwnerTab.PETS)
+    val selectedTab: StateFlow<OwnerTab> = _selectedTab.asStateFlow()
+
+    private val _tabBackStack = mutableListOf<OwnerTab>()
+
+    private val _canNavigateTabBack = MutableStateFlow(false)
+    val canNavigateTabBack: StateFlow<Boolean> = _canNavigateTabBack.asStateFlow()
+
+    private val _selectedHistoryTab = MutableStateFlow(0)
+    val selectedHistoryTab: StateFlow<Int> = _selectedHistoryTab.asStateFlow()
+
+    fun setSelectedTab(tab: OwnerTab) {
+        val current = _selectedTab.value
+        if (tab == current) return
+        if (tab == OwnerTab.PETS) {
+            _tabBackStack.clear()
+        } else {
+            _tabBackStack.remove(current)
+            _tabBackStack.add(current)
+        }
+        _selectedTab.value = tab
+        _canNavigateTabBack.value = _tabBackStack.isNotEmpty()
+    }
+
+    fun navigateTabBack(): Boolean {
+        val prev = _tabBackStack.removeLastOrNull() ?: return false
+        _selectedTab.value = prev
+        _canNavigateTabBack.value = _tabBackStack.isNotEmpty()
+        return true
+    }
+
+    fun setSelectedHistoryTab(index: Int) {
+        _selectedHistoryTab.value = index
+    }
+
     val pets: StateFlow<List<Pet>> = petRepository.getPetsForOwner(ownerId)
         .onEach { _isLoadingData.value = false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _petSearchQuery = MutableStateFlow("")
+    val petSearchQuery: StateFlow<String> = _petSearchQuery.asStateFlow()
+
+    val filteredPets: StateFlow<List<Pet>> = combine(pets, _petSearchQuery) { list, query ->
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) list
+        else list.filter {
+            it.name.lowercase().contains(q) ||
+                it.breed.lowercase().contains(q) ||
+                it.speciesEnum.displayName.lowercase().contains(q)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val allOwnerAppointments: StateFlow<List<Appointment>> =
         appointmentRepository.getOwnerAppointments(ownerId)
@@ -54,6 +104,22 @@ class OwnerViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    private val _bookingSearchQuery = MutableStateFlow("")
+    val bookingSearchQuery: StateFlow<String> = _bookingSearchQuery.asStateFlow()
+
+    val filteredActiveAppointments: StateFlow<List<Appointment>> = combine(
+        activeAppointments,
+        _bookingSearchQuery
+    ) { list, query ->
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) list
+        else list.filter {
+            it.petName.lowercase().contains(q) ||
+                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
+                it.date.contains(q)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val historyAppointments: StateFlow<List<Appointment>> = allOwnerAppointments
         .map { list ->
             list.filter {
@@ -64,6 +130,36 @@ class OwnerViewModel(
 
     val medicalRecords: StateFlow<List<MedicalRecord>> = medicalRecordRepository.getRecordsForOwner(ownerId)
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _historySearchQuery = MutableStateFlow("")
+    val historySearchQuery: StateFlow<String> = _historySearchQuery.asStateFlow()
+
+    val filteredMedicalRecords: StateFlow<List<MedicalRecord>> = combine(
+        medicalRecords,
+        _historySearchQuery
+    ) { list, query ->
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) list
+        else list.filter {
+            it.petName.lowercase().contains(q) ||
+                it.diagnosis.lowercase().contains(q) ||
+                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
+                (it.vaccineName?.lowercase()?.contains(q) == true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val filteredHistoryAppointments: StateFlow<List<Appointment>> = combine(
+        historyAppointments,
+        _historySearchQuery
+    ) { list, query ->
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) list
+        else list.filter {
+            it.petName.lowercase().contains(q) ||
+                it.serviceTypeEnum.displayName.lowercase().contains(q) ||
+                it.date.contains(q)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _selectedBookingDate = MutableStateFlow(LocalDate.now())
     val selectedBookingDate: StateFlow<LocalDate> = _selectedBookingDate.asStateFlow()
@@ -104,6 +200,18 @@ class OwnerViewModel(
 
     fun selectBookingDate(date: LocalDate) {
         _selectedBookingDate.value = date
+    }
+
+    fun setPetSearchQuery(query: String) {
+        _petSearchQuery.value = query
+    }
+
+    fun setBookingSearchQuery(query: String) {
+        _bookingSearchQuery.value = query
+    }
+
+    fun setHistorySearchQuery(query: String) {
+        _historySearchQuery.value = query
     }
 
     fun clearMessages() {

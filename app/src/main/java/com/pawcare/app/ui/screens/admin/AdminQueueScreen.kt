@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +46,7 @@ import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawChipShape
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.RejectionReasonDialog
 import com.pawcare.app.ui.components.ResponsiveScreenBox
@@ -57,6 +59,7 @@ fun AdminQueueScreen(
 ) {
     val pendingList by viewModel.filteredPendingAppointments.collectAsStateWithLifecycle()
     val availableDates by viewModel.availableQueueDates.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.queueSearchQuery.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingData.collectAsStateWithLifecycle()
     val selectedDateFilter by viewModel.selectedDateFilter.collectAsStateWithLifecycle()
 
@@ -80,10 +83,19 @@ fun AdminQueueScreen(
 
     ResponsiveScreenBox {
         Column(modifier = Modifier.fillMaxSize()) {
+            if (availableDates.isNotEmpty() || searchQuery.isNotBlank()) {
+                PawSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setQueueSearchQuery(it) },
+                    placeholder = "Cari nama anabul atau email pemilik...",
+                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 4.dp)
+                )
+            }
+
             if (availableDates.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
@@ -105,13 +117,17 @@ fun AdminQueueScreen(
                 }
             }
 
-            if (isLoading && pendingList.isEmpty()) {
+            if (isLoading && pendingList.isEmpty() && searchQuery.isBlank()) {
                 LoadingView(modifier = Modifier.weight(1f))
             } else if (pendingList.isEmpty()) {
                 EmptyStateView(
-                    title = "Tidak Ada Antrean Baru",
-                    message = "Semua permohonan booking janji temu telah ditinjau atau belum ada pemesanan baru.",
-                    icon = Icons.Default.FormatListBulleted,
+                    title = if (searchQuery.isNotBlank()) "Antrean Tidak Ditemukan" else "Tidak Ada Antrean Baru",
+                    message = if (searchQuery.isNotBlank()) {
+                        "Tidak ada antrean yang cocok dengan \"$searchQuery\"."
+                    } else {
+                        "Semua permohonan booking janji temu telah ditinjau atau belum ada pemesanan baru."
+                    },
+                    icon = if (searchQuery.isNotBlank()) Icons.Default.SearchOff else Icons.Default.FormatListBulleted,
                     modifier = Modifier.weight(1f)
                 )
             } else {
@@ -119,7 +135,7 @@ fun AdminQueueScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(pendingList, key = { it.appointmentId }) { apt ->

@@ -10,6 +10,7 @@ import com.pawcare.app.data.repository.FakeAppointmentRepository
 import com.pawcare.app.data.repository.FakeAuthRepository
 import com.pawcare.app.data.repository.FakeMedicalRecordRepository
 import com.pawcare.app.data.repository.FakePetRepository
+import com.pawcare.app.ui.navigation.OwnerTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -135,5 +136,86 @@ class OwnerViewModelTest {
         viewModel.cancelBooking("apt-cancel", "${tomorrow}_14:00")
         val activeAfter = viewModel.activeAppointments.value
         assertTrue(activeAfter.none { it.appointmentId == "apt-cancel" })
+    }
+
+    @Test
+    fun testPetSearch_FiltersByNameAndBreed() = runTest {
+        petRepo.savePet(Pet(petId = "p1", ownerId = currentUser.uid, name = "Mochi", breed = "Persian", species = PetSpecies.CAT.name))
+        petRepo.savePet(Pet(petId = "p2", ownerId = currentUser.uid, name = "Brownie", breed = "Golden Retriever", species = PetSpecies.DOG.name))
+
+        viewModel.setPetSearchQuery("mochi")
+        val filtered1 = viewModel.filteredPets.value
+        assertEquals(1, filtered1.size)
+        assertEquals("Mochi", filtered1.first().name)
+
+        viewModel.setPetSearchQuery("golden")
+        val filtered2 = viewModel.filteredPets.value
+        assertEquals(1, filtered2.size)
+        assertEquals("Brownie", filtered2.first().name)
+
+        viewModel.setPetSearchQuery("")
+        val filteredAll = viewModel.filteredPets.value
+        assertEquals(2, filteredAll.size)
+    }
+
+    @Test
+    fun testBookingSearch_FiltersByPetName() = runTest {
+        val tomorrow = LocalDate.now().plusDays(1)
+        val apt1 = Appointment(
+            appointmentId = "apt-1",
+            ownerId = currentUser.uid,
+            petName = "Mochi",
+            serviceType = ServiceType.CHECKUP.name,
+            date = tomorrow.toString(),
+            timeSlot = "09:00",
+            status = AppointmentStatus.PENDING.name
+        )
+        val apt2 = Appointment(
+            appointmentId = "apt-2",
+            ownerId = currentUser.uid,
+            petName = "Brownie",
+            serviceType = ServiceType.VACCINATION.name,
+            date = tomorrow.toString(),
+            timeSlot = "10:00",
+            status = AppointmentStatus.CONFIRMED.name
+        )
+        appointmentRepo.saveAppointmentDirect(apt1)
+        appointmentRepo.saveAppointmentDirect(apt2)
+
+        viewModel.setBookingSearchQuery("brownie")
+        val filtered = viewModel.filteredActiveAppointments.value
+        assertEquals(1, filtered.size)
+        assertEquals("Brownie", filtered.first().petName)
+
+        viewModel.setBookingSearchQuery("")
+        assertEquals(2, viewModel.filteredActiveAppointments.value.size)
+    }
+
+    @Test
+    fun testTabSelectionAndBackStackNavigation() = runTest {
+        assertEquals(OwnerTab.PETS, viewModel.selectedTab.value)
+        assertFalse(viewModel.canNavigateTabBack.value)
+
+        viewModel.setSelectedTab(OwnerTab.BOOKINGS)
+        assertEquals(OwnerTab.BOOKINGS, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        viewModel.setSelectedTab(OwnerTab.HISTORY)
+        assertEquals(OwnerTab.HISTORY, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        val popped1 = viewModel.navigateTabBack()
+        assertTrue(popped1)
+        assertEquals(OwnerTab.BOOKINGS, viewModel.selectedTab.value)
+        assertTrue(viewModel.canNavigateTabBack.value)
+
+        val popped2 = viewModel.navigateTabBack()
+        assertTrue(popped2)
+        assertEquals(OwnerTab.PETS, viewModel.selectedTab.value)
+        assertFalse(viewModel.canNavigateTabBack.value)
+
+        val popped3 = viewModel.navigateTabBack()
+        assertFalse(popped3)
+        assertEquals(OwnerTab.PETS, viewModel.selectedTab.value)
     }
 }

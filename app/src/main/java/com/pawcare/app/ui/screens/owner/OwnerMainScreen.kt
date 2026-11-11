@@ -1,5 +1,6 @@
 package com.pawcare.app.ui.screens.owner
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -43,9 +44,14 @@ fun OwnerMainScreen(
     onNavigateToMedicalDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
-    var currentTab by remember { mutableStateOf(OwnerTab.PETS) }
+    val currentTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val canNavigateTabBack by viewModel.canNavigateTabBack.collectAsStateWithLifecycle()
     var showLogoutDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    BackHandler(enabled = canNavigateTabBack) {
+        viewModel.navigateTabBack()
+    }
 
     val actionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -102,19 +108,19 @@ fun OwnerMainScreen(
             NavigationBar {
                 NavigationBarItem(
                     selected = currentTab == OwnerTab.PETS,
-                    onClick = { currentTab = OwnerTab.PETS },
+                    onClick = { viewModel.setSelectedTab(OwnerTab.PETS) },
                     icon = { Icon(Icons.Default.Pets, contentDescription = null) },
                     label = { Text(OwnerTab.PETS.title) }
                 )
                 NavigationBarItem(
                     selected = currentTab == OwnerTab.BOOKINGS,
-                    onClick = { currentTab = OwnerTab.BOOKINGS },
+                    onClick = { viewModel.setSelectedTab(OwnerTab.BOOKINGS) },
                     icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
                     label = { Text(OwnerTab.BOOKINGS.title) }
                 )
                 NavigationBarItem(
                     selected = currentTab == OwnerTab.HISTORY,
-                    onClick = { currentTab = OwnerTab.HISTORY },
+                    onClick = { viewModel.setSelectedTab(OwnerTab.HISTORY) },
                     icon = { Icon(Icons.Default.History, contentDescription = null) },
                     label = { Text(OwnerTab.HISTORY.title) }
                 )

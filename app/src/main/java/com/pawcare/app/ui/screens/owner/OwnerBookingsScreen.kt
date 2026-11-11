@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,9 +41,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pawcare.app.data.model.Appointment
 import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
+import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawButtonShape
 import com.pawcare.app.ui.components.PawCardShape
 import com.pawcare.app.ui.components.PawCareConfirmDialog
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
@@ -53,7 +56,9 @@ fun OwnerBookingsScreen(
     viewModel: OwnerViewModel,
     onCreateBookingClick: () -> Unit
 ) {
-    val activeBookings by viewModel.activeAppointments.collectAsStateWithLifecycle()
+    val allActiveBookings by viewModel.activeAppointments.collectAsStateWithLifecycle()
+    val filteredBookings by viewModel.filteredActiveAppointments.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.bookingSearchQuery.collectAsStateWithLifecycle()
     var appointmentToCancel by remember { mutableStateOf<Appointment?>(null) }
 
     if (appointmentToCancel != null) {
@@ -72,7 +77,7 @@ fun OwnerBookingsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (activeBookings.isEmpty()) {
+        if (allActiveBookings.isEmpty()) {
             EmptyStateView(
                 title = "Tidak Ada Janji Temu Aktif",
                 message = "Anda belum memiliki booking periksa atau vaksinasi yang sedang berjalan.",
@@ -82,22 +87,43 @@ fun OwnerBookingsScreen(
             )
         } else {
             ResponsiveScreenBox {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(activeBookings, key = { it.appointmentId }) { apt ->
-                        BookingCard(
-                            appointment = apt,
-                            onCancelClick = { appointmentToCancel = apt }
+                Column(modifier = Modifier.fillMaxSize()) {
+                    PawSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { viewModel.setBookingSearchQuery(it) },
+                        placeholder = "Cari nama hewan, layanan, atau tanggal...",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    )
+
+                    if (filteredBookings.isEmpty()) {
+                        EmptyStateView(
+                            title = "Booking Tidak Ditemukan",
+                            message = "Tidak ada janji temu yang cocok dengan \"$searchQuery\".",
+                            icon = Icons.Default.SearchOff,
+                            modifier = Modifier.weight(1f)
                         )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filteredBookings, key = { it.appointmentId }) { apt ->
+                                BookingCard(
+                                    appointment = apt,
+                                    fallbackOwnerEmail = viewModel.ownerEmail,
+                                    onCancelClick = { appointmentToCancel = apt }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
-        if (activeBookings.isNotEmpty()) {
+        if (allActiveBookings.isNotEmpty()) {
             FloatingActionButton(
                 onClick = onCreateBookingClick,
                 shape = RoundedCornerShape(16.dp),
@@ -114,6 +140,7 @@ fun OwnerBookingsScreen(
 @Composable
 fun BookingCard(
     appointment: Appointment,
+    fallbackOwnerEmail: String = "",
     onCancelClick: () -> Unit
 ) {
     Card(
@@ -127,7 +154,6 @@ fun BookingCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Baris atas: Avatar + Nama Hewan & Layanan di kiri, Badge Status di kanan
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -139,7 +165,7 @@ fun BookingCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = appointment.petName,
+                        text = "${appointment.petName} (${appointment.petSpeciesEnum.displayName})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -157,7 +183,8 @@ fun BookingCard(
                 StatusBadge(status = appointment.statusEnum)
             }
 
-            // Baris khusus jadwal kunjungan: Full-width agar jam & tanggal TIDAK tertutup/terpotong
+            OwnerInfoRow(ownerEmail = appointment.ownerEmail.ifBlank { fallbackOwnerEmail })
+
             AppointmentScheduleBanner(
                 date = appointment.date,
                 timeSlot = appointment.timeSlot

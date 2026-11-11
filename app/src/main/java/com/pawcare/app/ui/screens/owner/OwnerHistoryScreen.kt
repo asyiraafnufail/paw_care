@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -26,9 +27,6 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +38,9 @@ import com.pawcare.app.data.model.AppointmentStatus
 import com.pawcare.app.data.model.MedicalRecord
 import com.pawcare.app.ui.components.AppointmentScheduleBanner
 import com.pawcare.app.ui.components.EmptyStateView
+import com.pawcare.app.ui.components.OwnerInfoRow
 import com.pawcare.app.ui.components.PawCardShape
+import com.pawcare.app.ui.components.PawSearchBar
 import com.pawcare.app.ui.components.PetAvatar
 import com.pawcare.app.ui.components.ResponsiveScreenBox
 import com.pawcare.app.ui.components.StatusBadge
@@ -51,18 +51,21 @@ fun OwnerHistoryScreen(
     viewModel: OwnerViewModel,
     onRecordClick: (String) -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val medicalRecords by viewModel.medicalRecords.collectAsStateWithLifecycle()
-    val historyAppointments by viewModel.historyAppointments.collectAsStateWithLifecycle()
+    val selectedTab by viewModel.selectedHistoryTab.collectAsStateWithLifecycle()
+    val allRecords by viewModel.medicalRecords.collectAsStateWithLifecycle()
+    val filteredRecords by viewModel.filteredMedicalRecords.collectAsStateWithLifecycle()
+    val allHistoryAppointments by viewModel.historyAppointments.collectAsStateWithLifecycle()
+    val filteredHistoryAppointments by viewModel.filteredHistoryAppointments.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.historySearchQuery.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
+                onClick = { viewModel.setSelectedHistoryTab(0) },
                 text = {
                     Text(
-                        text = "Buku Medis (${medicalRecords.size})",
+                        text = "Buku Medis (${allRecords.size})",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -70,10 +73,10 @@ fun OwnerHistoryScreen(
             )
             Tab(
                 selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
+                onClick = { viewModel.setSelectedHistoryTab(1) },
                 text = {
                     Text(
-                        text = "Riwayat Janji (${historyAppointments.size})",
+                        text = "Riwayat Janji (${allHistoryAppointments.size})",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -81,33 +84,73 @@ fun OwnerHistoryScreen(
             )
         }
 
+        val hasDataInActiveTab = if (selectedTab == 0) allRecords.isNotEmpty() else allHistoryAppointments.isNotEmpty()
+        if (hasDataInActiveTab) {
+            ResponsiveScreenBox(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                PawSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { viewModel.setHistorySearchQuery(it) },
+                    placeholder = if (selectedTab == 0) {
+                        "Cari hewan, diagnosa, atau vaksin..."
+                    } else {
+                        "Cari hewan, layanan, atau tanggal..."
+                    }
+                )
+            }
+        }
+
         when (selectedTab) {
-            0 -> MedicalRecordsTab(records = medicalRecords, onRecordClick = onRecordClick)
-            1 -> AppointmentsHistoryTab(appointments = historyAppointments, onRecordClick = onRecordClick)
+            0 -> MedicalRecordsTab(
+                hasAnyData = allRecords.isNotEmpty(),
+                records = filteredRecords,
+                fallbackOwnerEmail = viewModel.ownerEmail,
+                searchQuery = searchQuery,
+                onRecordClick = onRecordClick
+            )
+            1 -> AppointmentsHistoryTab(
+                hasAnyData = allHistoryAppointments.isNotEmpty(),
+                appointments = filteredHistoryAppointments,
+                fallbackOwnerEmail = viewModel.ownerEmail,
+                searchQuery = searchQuery,
+                onRecordClick = onRecordClick
+            )
         }
     }
 }
 
 @Composable
 private fun MedicalRecordsTab(
+    hasAnyData: Boolean,
     records: List<MedicalRecord>,
+    fallbackOwnerEmail: String,
+    searchQuery: String,
     onRecordClick: (String) -> Unit
 ) {
-    if (records.isEmpty()) {
+    if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Catatan Medis",
             message = "Catatan medis, diagnosa dokter, dan riwayat vaksin anabul akan muncul di sini setelah pemeriksaan selesai.",
             icon = Icons.Default.Description
         )
+    } else if (records.isEmpty()) {
+        EmptyStateView(
+            title = "Catatan Tidak Ditemukan",
+            message = "Tidak ada buku medis yang cocok dengan \"$searchQuery\".",
+            icon = Icons.Default.SearchOff
+        )
     } else {
         ResponsiveScreenBox {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(records, key = { it.appointmentId }) { record ->
-                    MedicalRecordCard(record = record, onClick = { onRecordClick(record.appointmentId) })
+                    MedicalRecordCard(
+                        record = record,
+                        fallbackOwnerEmail = fallbackOwnerEmail,
+                        onClick = { onRecordClick(record.appointmentId) }
+                    )
                 }
             }
         }
@@ -117,6 +160,7 @@ private fun MedicalRecordsTab(
 @Composable
 private fun MedicalRecordCard(
     record: MedicalRecord,
+    fallbackOwnerEmail: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -134,7 +178,7 @@ private fun MedicalRecordCard(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = "${record.petName} • ${record.serviceTypeEnum.displayName}",
@@ -143,6 +187,7 @@ private fun MedicalRecordCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                OwnerInfoRow(ownerEmail = record.ownerEmail.ifBlank { fallbackOwnerEmail })
                 Text(
                     text = "Tanggal Periksa: ${record.visitDate}",
                     style = MaterialTheme.typography.bodySmall,
@@ -174,20 +219,29 @@ private fun MedicalRecordCard(
 
 @Composable
 private fun AppointmentsHistoryTab(
+    hasAnyData: Boolean,
     appointments: List<Appointment>,
+    fallbackOwnerEmail: String,
+    searchQuery: String,
     onRecordClick: (String) -> Unit
 ) {
-    if (appointments.isEmpty()) {
+    if (!hasAnyData) {
         EmptyStateView(
             title = "Belum Ada Riwayat Selesai",
             message = "Janji temu yang telah selesai atau dibatalkan akan diarsipkan di sini.",
             icon = Icons.Default.History
         )
+    } else if (appointments.isEmpty()) {
+        EmptyStateView(
+            title = "Riwayat Tidak Ditemukan",
+            message = "Tidak ada riwayat janji yang cocok dengan \"$searchQuery\".",
+            icon = Icons.Default.SearchOff
+        )
     } else {
         ResponsiveScreenBox {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(appointments, key = { it.appointmentId }) { apt ->
@@ -218,7 +272,7 @@ private fun AppointmentsHistoryTab(
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(
-                                        text = apt.petName,
+                                        text = "${apt.petName} (${apt.petSpeciesEnum.displayName})",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -235,6 +289,7 @@ private fun AppointmentsHistoryTab(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 StatusBadge(status = apt.statusEnum)
                             }
+                            OwnerInfoRow(ownerEmail = apt.ownerEmail.ifBlank { fallbackOwnerEmail })
                             AppointmentScheduleBanner(
                                 date = apt.date,
                                 timeSlot = apt.timeSlot

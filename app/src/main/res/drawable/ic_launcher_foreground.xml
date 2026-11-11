@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Top outer-left toe -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,37 C30.5,37 28,40.5 28,44.5 C28,48.5 30.5,51.5 34,51.5 C37.5,51.5 40,48.5 40,44.5 C40,40.5 37.5,37 34,37 Z" />
+
+    <!-- Top inner-left toe -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46.5,27.5 C42.8,27.5 40,31.2 40,35.5 C40,39.8 42.8,43 46.5,43 C50.2,43 53,39.8 53,35.5 C53,31.2 50.2,27.5 46.5,27.5 Z" />
+
+    <!-- Top inner-right toe -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M61.5,27.5 C57.8,27.5 55,31.2 55,35.5 C55,39.8 57.8,43 61.5,43 C65.2,43 68,39.8 68,35.5 C68,31.2 65.2,27.5 61.5,27.5 Z" />
+
+    <!-- Top outer-right toe -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,37 C70.5,37 68,40.5 68,44.5 C68,48.5 70.5,51.5 74,51.5 C77.5,51.5 80,48.5 80,44.5 C80,40.5 77.5,37 74,37 Z" />
+
+    <!-- Main paw pad -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,49 C44,49 36,56 36,65 C36,72 41,77 48,77 C51,77 53,75.5 54,75.5 C55,75.5 57,77 60,77 C67,77 72,72 72,65 C72,56 64,49 54,49 Z" />
+
+    <!-- Clinic medical cross inside pad -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M52,57 L56,57 L56,61 L60,61 L60,65 L56,65 L56,69 L52,69 L52,65 L48,65 L48,61 L52,61 Z" />
+</vector>
